@@ -13,7 +13,7 @@ export default async function AdminLayout({
   const session = await getCurrentSession()
   if (!session?.user?.id) redirect('/login?callbackUrl=/admin')
   const role = session.user.role
-  if (role !== 'SUPERADMIN' && role !== 'ADMIN') redirect('/')
+  if (role !== 'SUPERADMIN' && role !== 'ADMIN' && role !== 'AUXILIAR') redirect('/')
 
   return (
     <div className="flex min-h-screen bg-secondary/30">

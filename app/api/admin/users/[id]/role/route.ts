@@ -6,14 +6,14 @@ import { requireRole } from '@/lib/auth-helpers'
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  role: z.enum(['SUPERADMIN', 'ADMIN', 'CLIENTE']),
+  role: z.enum(['SUPERADMIN', 'ADMIN', 'AUXILIAR', 'CLIENTE']),
 })
 
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ) {
-  const auth = await requireRole(['SUPERADMIN'])
+  const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
   if (auth.error) {
     return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
   }
@@ -30,9 +30,26 @@ export async function PATCH(
     const body = await req.json()
     const data = schema.parse(body)
 
+    // Solo SUPERADMIN puede asignar SUPERADMIN
+    if (data.role === 'SUPERADMIN' && auth.session.user.role !== 'SUPERADMIN') {
+      return NextResponse.json(
+        { error: 'forbidden', message: 'Solo Super Admin puede asignar el rol Super Admin' },
+        { status: 403 },
+      )
+    }
+
+    // ADMIN no puede modificar a un SUPERADMIN
+    const targetUser = await prisma.user.findUnique({ where: { id: params.id }, select: { role: true } })
+    if (targetUser?.role === 'SUPERADMIN' && auth.session.user.role !== 'SUPERADMIN') {
+      return NextResponse.json(
+        { error: 'forbidden', message: 'No puedes modificar un Super Admin' },
+        { status: 403 },
+      )
+    }
+
     const updated = await prisma.user.update({
       where: { id: params.id },
-      data: { role: data.role },
+      data: { role: data.role as any },
       select: { id: true, name: true, email: true, role: true },
     })
 

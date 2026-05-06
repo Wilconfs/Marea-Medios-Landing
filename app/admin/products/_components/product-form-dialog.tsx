@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { Loader2, Upload, X, ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -68,6 +68,8 @@ export function ProductFormDialog({
 }) {
   const [data, setData] = useState<ProductFormData>(EMPTY)
   const [submitting, setSubmitting] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (open) setData(initial ?? EMPTY)
@@ -79,6 +81,61 @@ export function ProductFormDialog({
   ) => setData((d) => ({ ...d, [k]: v }))
 
   const isEdit = !!initial?.id
+
+  async function handleImageUpload(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Solo se permiten imágenes')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('La imagen no puede superar 10 MB')
+      return
+    }
+
+    setUploading(true)
+    try {
+      // 1. Get presigned URL
+      const presignRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          contentType: file.type,
+        }),
+      })
+      if (!presignRes.ok) throw new Error('Error al solicitar URL de subida')
+      const { uploadUrl, publicUrl } = await presignRes.json()
+
+      // 2. Upload to S3 - check if content-disposition is in signed headers
+      const headers: Record<string, string> = {
+        'Content-Type': file.type,
+      }
+      if (uploadUrl.includes('content-disposition')) {
+        headers['Content-Disposition'] = 'attachment'
+      }
+
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers,
+        body: file,
+      })
+
+      if (!uploadRes.ok) throw new Error('Error al subir imagen')
+
+      update('imageUrl', publicUrl)
+      toast.success('Imagen subida correctamente')
+    } catch (err: any) {
+      console.error(err)
+      toast.error(err?.message || 'Error al subir imagen')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  function removeImage() {
+    update('imageUrl', '')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -234,22 +291,74 @@ export function ProductFormDialog({
               />
             </div>
 
+            {/* Image upload section */}
             <div className="sm:col-span-2">
-              <Label htmlFor="imageUrl">URL de imagen *</Label>
-              <Input
-                id="imageUrl"
-                type="url"
-                placeholder="https://..."
-                value={data.imageUrl}
-                onChange={(e) => update('imageUrl', e.target.value)}
-                required
-              />
-              {data.imageUrl && (
-                <div className="mt-2 h-24 w-24 overflow-hidden rounded-md border bg-muted">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={data.imageUrl} alt="preview" className="h-full w-full object-cover" />
-                </div>
-              )}
+              <Label>Imagen del producto *</Label>
+              <div className="mt-2">
+                {data.imageUrl ? (
+                  <div className="relative inline-block">
+                    <div className="h-32 w-32 overflow-hidden rounded-lg border bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={data.imageUrl}
+                        alt="preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-secondary/30 transition-colors hover:border-primary/50 hover:bg-secondary/50"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Haz clic para subir imagen
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          JPG, PNG, WebP • Máx 10 MB
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleImageUpload(file)
+                  }}
+                />
+                {!data.imageUrl && (
+                  <div className="mt-2">
+                    <Label htmlFor="imageUrlManual" className="text-xs text-muted-foreground">
+                      O pega una URL de imagen
+                    </Label>
+                    <Input
+                      id="imageUrlManual"
+                      type="url"
+                      placeholder="https://..."
+                      value={data.imageUrl}
+                      onChange={(e) => update('imageUrl', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -287,7 +396,7 @@ export function ProductFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || uploading}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEdit ? 'Guardar cambios' : 'Crear producto'}
             </Button>

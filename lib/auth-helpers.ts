@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'CLIENTE'
+export type UserRole = 'SUPERADMIN' | 'ADMIN' | 'AUXILIAR' | 'CLIENTE'
 
 export async function getCurrentSession() {
   const session = await getServerSession(authOptions)
@@ -13,7 +13,7 @@ export async function requireRole(roles: UserRole[]) {
   if (!session?.user?.id) {
     return { error: 'unauthorized' as const }
   }
-  if (!roles.includes(session.user.role)) {
+  if (!roles.includes(session.user.role as UserRole)) {
     return { error: 'forbidden' as const }
   }
   return { session }

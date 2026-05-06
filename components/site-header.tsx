@@ -52,6 +52,10 @@ export function SiteHeader() {
     .slice(0, 2)
     .toUpperCase()
 
+  const isAdminRole = session?.user?.role === 'SUPERADMIN' ||
+    session?.user?.role === 'ADMIN' ||
+    session?.user?.role === 'AUXILIAR'
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
       <div className="container-page flex h-16 items-center gap-3">
@@ -128,8 +132,7 @@ export function SiteHeader() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {(session?.user?.role === 'SUPERADMIN' ||
-                  session?.user?.role === 'ADMIN') && (
+                {isAdminRole && (
                   <DropdownMenuItem
                     onClick={() => router.push('/admin')}
                     className="cursor-pointer"
@@ -138,13 +141,6 @@ export function SiteHeader() {
                     Panel admin
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  onClick={() => router.push('/cart')}
-                  className="cursor-pointer"
-                >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Mi carrito
-                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push('/orders')}
                   className="cursor-pointer"

@@ -28,9 +28,16 @@ const items: Item[] = [
   { href: '/admin/products', label: 'Productos', icon: Package },
   { href: '/admin/categories', label: 'Categorías', icon: Tags },
   { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN'] },
+  { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
 ]
+
+const ROLE_DISPLAY: Record<string, string> = {
+  SUPERADMIN: 'Super Admin',
+  ADMIN: 'Administrador',
+  AUXILIAR: 'Auxiliar',
+  CLIENTE: 'Cliente',
+}
 
 export function AdminSidebar({
   role,
@@ -58,7 +65,7 @@ export function AdminSidebar({
       {/* User info */}
       <div className="border-b px-6 py-4">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {role === 'SUPERADMIN' ? 'Super Admin' : 'Administrador'}
+          {ROLE_DISPLAY[role] ?? role}
         </p>
         <p className="mt-1 truncate text-sm font-semibold">{userName}</p>
       </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Loader2, MessageCircle, User, Phone, Mail, Calendar } from 'lucide-react'
+import { ArrowLeft, Loader2, MessageCircle, User, Phone, Mail, Calendar, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { OrderTimeline, type OrderStatus } from '@/components/order-timeline'
 import { formatPrice } from '@/lib/format'
 
@@ -37,10 +47,33 @@ type Order = {
   user: { name: string; email: string } | null
 }
 
+const STATUS_ORDER: OrderStatus[] = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED']
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  PENDING: 'Recibido',
+  CONFIRMED: 'Preparando',
+  SHIPPED: 'Enviado',
+  DELIVERED: 'Entregado',
+  CANCELLED: 'Cancelado',
+}
+
+function getAllowedStatuses(current: OrderStatus): OrderStatus[] {
+  if (current === 'DELIVERED' || current === 'CANCELLED') return [current]
+  const idx = STATUS_ORDER.indexOf(current)
+  if (idx === -1) return [current]
+  // Solo puede avanzar al siguiente estado o cancelar
+  const allowed: OrderStatus[] = [current]
+  if (idx < STATUS_ORDER.length - 1) {
+    allowed.push(STATUS_ORDER[idx + 1])
+  }
+  allowed.push('CANCELLED')
+  return allowed
+}
+
 export function OrderDetailView({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null)
 
   async function load() {
     setLoading(true)
@@ -67,18 +100,28 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
 
-  async function changeStatus(status: OrderStatus) {
-    if (!order) return
+  function requestStatusChange(status: OrderStatus) {
+    if (!order || status === order.status) return
+    setPendingStatus(status)
+  }
+
+  async function confirmStatusChange() {
+    if (!order || !pendingStatus) return
     setUpdating(true)
+    setPendingStatus(null)
     try {
       const res = await fetch(`/api/admin/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: pendingStatus }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error === 'invalid_transition' ? 'Transición de estado no permitida' : 'No se pudo actualizar')
+        return
+      }
       toast.success('Estado actualizado')
-      setOrder({ ...order, status })
+      setOrder({ ...order, status: pendingStatus })
     } catch {
       toast.error('No se pudo actualizar')
     } finally {
@@ -109,6 +152,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   }
 
   const items = Array.isArray(order.items) ? order.items : []
+  const allowedStatuses = getAllowedStatuses(order.status)
+  const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCELLED'
 
   return (
     <div className="space-y-6">
@@ -132,20 +177,23 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           <span className="text-sm text-muted-foreground">Estado:</span>
           <Select
             value={order.status}
-            onValueChange={(v) => changeStatus(v as OrderStatus)}
-            disabled={updating}
+            onValueChange={(v) => requestStatusChange(v as OrderStatus)}
+            disabled={updating || isTerminal}
           >
             <SelectTrigger className="w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PENDING">Recibido</SelectItem>
-              <SelectItem value="CONFIRMED">Preparando</SelectItem>
-              <SelectItem value="SHIPPED">Enviado</SelectItem>
-              <SelectItem value="DELIVERED">Entregado</SelectItem>
-              <SelectItem value="CANCELLED">Cancelado</SelectItem>
+              {allowedStatuses.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          {isTerminal && (
+            <span className="text-xs text-muted-foreground">(Estado final)</span>
+          )}
         </div>
       </div>
 
@@ -231,7 +279,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               <div className="flex items-start gap-3">
                 <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div>
-                  <p className="text-xs text-muted-foreground">Teléfono</p>
+                  <p className="text-xs text-muted-foreground">Celular</p>
                   <p className="font-medium">{order.customerPhone}</p>
                 </div>
               </div>
@@ -265,6 +313,33 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Confirmation dialog */}
+      <AlertDialog open={!!pendingStatus} onOpenChange={(o) => !o && setPendingStatus(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirmar cambio de estado
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingStatus === 'CANCELLED'
+                ? '¿Estás seguro de cancelar este pedido? Esta acción es irreversible y no se podrá reactivar.'
+                : `¿Cambiar el estado a "${STATUS_LABELS[pendingStatus!]}"? Este cambio es irreversible, no se podrá volver al estado anterior.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmStatusChange}
+              className={pendingStatus === 'CANCELLED' ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+            >
+              Sí, confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

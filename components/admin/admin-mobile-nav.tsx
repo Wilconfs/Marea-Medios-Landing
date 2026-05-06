@@ -13,7 +13,7 @@ const items = [
   { href: '/admin/products', label: 'Productos', icon: Package },
   { href: '/admin/categories', label: 'Categorías', icon: Tags },
   { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN'] as UserRole[] },
+  { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] as UserRole[] },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] as UserRole[] },
 ]
 

@@ -37,7 +37,18 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
 
   const handleCheckout = async () => {
     if (!items || items.length === 0) return
-    const finalName = customerName.trim() || session?.user?.name || ''
+
+    // Validar campos obligatorios
+    if (!customerName.trim()) {
+      toast.error('El nombre es obligatorio')
+      return
+    }
+    if (!customerPhone.trim()) {
+      toast.error('El celular es obligatorio')
+      return
+    }
+
+    const finalName = customerName.trim()
     setSubmitting(true)
     try {
       // Save the order to DB
@@ -249,25 +260,27 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
           <div className="space-y-2 pt-1">
             <div>
               <Label htmlFor="customer-name" className="text-xs">
-                Tu nombre (opcional)
+                Nombre <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="customer-name"
-                placeholder="María Pérez"
+                placeholder="Nombre completo"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
+                required
               />
             </div>
             <div>
               <Label htmlFor="customer-phone" className="text-xs">
-                Teléfono (opcional)
+                Celular <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="customer-phone"
                 type="tel"
-                placeholder="3001234567"
+                placeholder="Ingrese número"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
+                required
               />
             </div>
           </div>

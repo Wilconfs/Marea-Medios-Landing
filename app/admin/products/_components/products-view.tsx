@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Image from 'next/image'
 import { Plus, Search, Pencil, Trash2, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
@@ -41,6 +42,9 @@ type Product = {
 }
 
 export function ProductsView() {
+  const { data: session } = useSession() || {}
+  const isReadOnly = session?.user?.role === 'AUXILIAR'
+
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
@@ -142,13 +146,15 @@ export function ProductsView() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Productos</h1>
           <p className="text-sm text-muted-foreground">
-            Gestiona el catálogo de tu tienda
+            {isReadOnly ? 'Vista del catálogo (solo lectura)' : 'Gestiona el catálogo de tu tienda'}
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo producto
-        </Button>
+        {!isReadOnly && (
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo producto
+          </Button>
+        )}
       </div>
 
       <div
@@ -188,8 +194,8 @@ export function ProductsView() {
                   <th className="px-4 py-3 text-right">Precio</th>
                   <th className="px-4 py-3 text-right">Stock</th>
                   <th className="px-4 py-3 text-right">Vendidos</th>
-                  <th className="px-4 py-3 text-center">Activo</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
+                  {!isReadOnly && <th className="px-4 py-3 text-center">Activo</th>}
+                  {!isReadOnly && <th className="px-4 py-3 text-right">Acciones</th>}
                 </tr>
               </thead>
               <tbody>
@@ -222,34 +228,38 @@ export function ProductsView() {
                     <td className="px-4 py-3 text-right font-mono">{formatPrice(p.price)}</td>
                     <td className="px-4 py-3 text-right font-mono">{formatNumber(p.stock)}</td>
                     <td className="px-4 py-3 text-right font-mono">{formatNumber(p.soldCount)}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Switch
-                        checked={p.isActive}
-                        disabled={togglingId === p.id}
-                        onCheckedChange={() => toggleActive(p)}
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => openEdit(p)}
-                          aria-label="Editar"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setDeletingId(p.id)}
-                          aria-label="Eliminar"
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
+                    {!isReadOnly && (
+                      <td className="px-4 py-3 text-center">
+                        <Switch
+                          checked={p.isActive}
+                          disabled={togglingId === p.id}
+                          onCheckedChange={() => toggleActive(p)}
+                        />
+                      </td>
+                    )}
+                    {!isReadOnly && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openEdit(p)}
+                            aria-label="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDeletingId(p.id)}
+                            aria-label="Eliminar"
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -258,33 +268,37 @@ export function ProductsView() {
         )}
       </div>
 
-      <ProductFormDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        initial={editing}
-        categories={categories}
-        onSaved={load}
-      />
+      {!isReadOnly && (
+        <ProductFormDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          initial={editing}
+          categories={categories}
+          onSaved={load}
+        />
+      )}
 
-      <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar producto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {!isReadOnly && (
+        <AlertDialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar producto?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   )
 }

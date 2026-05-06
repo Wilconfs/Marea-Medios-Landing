@@ -14,15 +14,16 @@ const createSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   soldCount: z.number().int().min(0).optional(),
   stock: z.number().int().min(0),
-  imageUrl: z.string().url(),
+  imageUrl: z.string().min(1),
   categoryId: z.string().min(1),
   isActive: z.boolean().optional(),
   isFlashSale: z.boolean().optional(),
 })
 
 // List all products (admin view: includes inactive)
+// AUXILIAR puede ver (solo lectura)
 export async function GET() {
-  const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
+  const auth = await requireRole(['SUPERADMIN', 'ADMIN', 'AUXILIAR'])
   if (auth.error) {
     return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
   }
@@ -36,6 +37,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  // AUXILIAR NO puede crear productos
   const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
   if (auth.error) {
     return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })

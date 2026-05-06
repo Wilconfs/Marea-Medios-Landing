@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, Loader2, Tags } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -62,6 +63,8 @@ function slugify(s: string) {
 }
 
 export function CategoriesView() {
+  const { data: session } = useSession() || {}
+  const isReadOnly = session?.user?.role === 'AUXILIAR'
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
@@ -169,10 +172,12 @@ export function CategoriesView() {
             Organiza tu catálogo en categorías
           </p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nueva categoría
-        </Button>
+        {!isReadOnly && (
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nueva categoría
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -196,19 +201,21 @@ export function CategoriesView() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
                   <Tags className="h-5 w-5" />
                 </div>
-                <div className="flex gap-1">
-                  <Button size="icon" variant="ghost" onClick={() => openEdit(c)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setDeleting(c)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                {!isReadOnly && (
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => openEdit(c)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setDeleting(c)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <h3 className="font-display text-lg font-semibold">{c.name}</h3>
               <p className="mt-1 text-xs text-muted-foreground">/{c.slug}</p>

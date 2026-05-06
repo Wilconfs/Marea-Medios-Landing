@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Search, Shield, ShieldCheck, User as UserIcon } from 'lucide-react'
+import { Loader2, Search, Shield, ShieldCheck, User as UserIcon, Plus, HardHat } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -12,9 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
-type Role = 'SUPERADMIN' | 'ADMIN' | 'CLIENTE'
+type Role = 'SUPERADMIN' | 'ADMIN' | 'AUXILIAR' | 'CLIENTE'
 
 type User = {
   id: string
@@ -28,22 +38,30 @@ type User = {
 const ROLE_LABEL: Record<Role, string> = {
   SUPERADMIN: 'Super Admin',
   ADMIN: 'Administrador',
+  AUXILIAR: 'Auxiliar',
   CLIENTE: 'Cliente',
 }
 
 const ROLE_COLOR: Record<Role, string> = {
   SUPERADMIN: 'bg-primary/10 text-primary',
   ADMIN: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  AUXILIAR: 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
   CLIENTE: 'bg-secondary text-foreground',
 }
 
 export function UsersView() {
   const { data: session } = useSession() || {}
   const currentUserId = session?.user?.id
+  const currentUserRole = session?.user?.role as Role | undefined
+  const isSuperAdmin = currentUserRole === 'SUPERADMIN'
+
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'CLIENTE' as Role })
 
   async function load() {
     setLoading(true)
@@ -83,6 +101,8 @@ export function UsersView() {
         const err = await res.json().catch(() => ({}))
         if (err.error === 'cannot_modify_self') {
           toast.error('No puedes cambiar tu propio rol')
+        } else if (err.error === 'forbidden') {
+          toast.error(err.message || 'No tienes permiso para esta acción')
         } else {
           toast.error('No se pudo actualizar')
         }
@@ -95,13 +115,71 @@ export function UsersView() {
     }
   }
 
+  // Roles disponibles según el usuario actual
+  function getAvailableRoles(): Role[] {
+    if (isSuperAdmin) return ['SUPERADMIN', 'ADMIN', 'AUXILIAR', 'CLIENTE']
+    return ['ADMIN', 'AUXILIAR', 'CLIENTE']
+  }
+
+  function getAssignableRoles(targetUser: User): Role[] {
+    const roles = getAvailableRoles()
+    // Si el target es SUPERADMIN y yo no soy SUPERADMIN, no puedo cambiarlo
+    if (targetUser.role === 'SUPERADMIN' && !isSuperAdmin) return [targetUser.role]
+    return roles
+  }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newUser.name.trim() || !newUser.email.trim() || !newUser.password.trim()) {
+      toast.error('Todos los campos son obligatorios')
+      return
+    }
+    if (newUser.password.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+    setCreating(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUser),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        if (err.error === 'email_taken') {
+          toast.error('Ya existe un usuario con ese email')
+        } else if (err.error === 'forbidden') {
+          toast.error(err.message || 'No tienes permiso')
+        } else {
+          toast.error('No se pudo crear el usuario')
+        }
+        return
+      }
+      toast.success('Usuario creado exitosamente')
+      setCreateOpen(false)
+      setNewUser({ name: '', email: '', password: '', role: 'CLIENTE' })
+      load()
+    } catch {
+      toast.error('Error de red')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Usuarios</h1>
-        <p className="text-sm text-muted-foreground">
-          Administra los roles y permisos de los usuarios
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Usuarios</h1>
+          <p className="text-sm text-muted-foreground">
+            Administra los roles y permisos de los usuarios
+          </p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Crear usuario
+        </Button>
       </div>
 
       <div
@@ -148,13 +226,15 @@ export function UsersView() {
                 {filtered.map((u) => {
                   const isSelf = u.id === currentUserId
                   const Icon =
-                    u.role === 'SUPERADMIN' ? ShieldCheck : u.role === 'ADMIN' ? Shield : UserIcon
+                    u.role === 'SUPERADMIN' ? ShieldCheck : u.role === 'ADMIN' ? Shield : u.role === 'AUXILIAR' ? HardHat : UserIcon
                   const initials = u.name
                     .split(' ')
                     .map((p) => p[0])
                     .join('')
                     .slice(0, 2)
                     .toUpperCase()
+                  const assignable = getAssignableRoles(u)
+                  const canChange = !isSelf && assignable.length > 1
                   return (
                     <tr key={u.id} className="border-b last:border-0 hover:bg-secondary/30">
                       <td className="px-4 py-3">
@@ -196,15 +276,17 @@ export function UsersView() {
                         <Select
                           value={u.role}
                           onValueChange={(v) => changeRole(u, v as Role)}
-                          disabled={isSelf || updatingId === u.id}
+                          disabled={!canChange || updatingId === u.id}
                         >
                           <SelectTrigger className="ml-auto w-40">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="CLIENTE">Cliente</SelectItem>
-                            <SelectItem value="ADMIN">Administrador</SelectItem>
-                            <SelectItem value="SUPERADMIN">Super Admin</SelectItem>
+                            {assignable.map((r) => (
+                              <SelectItem key={r} value={r}>
+                                {ROLE_LABEL[r]}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </td>
@@ -216,6 +298,80 @@ export function UsersView() {
           </div>
         )}
       </div>
+
+      {/* Create user dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Crear usuario interno</DialogTitle>
+            <DialogDescription>
+              Crea una cuenta para un colaborador. Podrá acceder al panel según el rol asignado.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <div>
+              <Label htmlFor="new-name">Nombre *</Label>
+              <Input
+                id="new-name"
+                placeholder="Nombre completo"
+                value={newUser.name}
+                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-email">Email *</Label>
+              <Input
+                id="new-email"
+                type="email"
+                placeholder="correo@ejemplo.com"
+                value={newUser.email}
+                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-password">Contraseña *</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={newUser.password}
+                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-role">Rol *</Label>
+              <Select
+                value={newUser.role}
+                onValueChange={(v) => setNewUser({ ...newUser, role: v as Role })}
+              >
+                <SelectTrigger id="new-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableRoles().map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABEL[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Crear usuario
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

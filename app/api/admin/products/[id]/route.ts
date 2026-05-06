@@ -14,12 +14,13 @@ const updateSchema = z.object({
   rating: z.number().min(0).max(5).optional(),
   soldCount: z.number().int().min(0).optional(),
   stock: z.number().int().min(0).optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().min(1).optional(),
   categoryId: z.string().min(1).optional(),
   isActive: z.boolean().optional(),
   isFlashSale: z.boolean().optional(),
 })
 
+// AUXILIAR NO puede editar ni eliminar productos
 export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
