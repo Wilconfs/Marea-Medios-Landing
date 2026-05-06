@@ -1,0 +1,270 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { ArrowLeft, Loader2, MessageCircle, User, Phone, Mail, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { OrderTimeline, type OrderStatus } from '@/components/order-timeline'
+import { formatPrice } from '@/lib/format'
+
+type OrderItem = {
+  id: string
+  name: string
+  quantity: number
+  price: number
+  imageUrl?: string
+}
+
+type Order = {
+  id: string
+  total: number
+  status: OrderStatus
+  customerName: string | null
+  customerPhone: string | null
+  notes: string | null
+  whatsappSent: boolean
+  createdAt: string
+  items: OrderItem[]
+  user: { name: string; email: string } | null
+}
+
+export function OrderDetailView({ orderId }: { orderId: string }) {
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [updating, setUpdating] = useState(false)
+
+  async function load() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`)
+      if (!res.ok) {
+        if (res.status === 404) {
+          setOrder(null)
+          return
+        }
+        throw new Error()
+      }
+      const data = await res.json()
+      setOrder(data)
+    } catch {
+      toast.error('No se pudo cargar el pedido')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId])
+
+  async function changeStatus(status: OrderStatus) {
+    if (!order) return
+    setUpdating(true)
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success('Estado actualizado')
+      setOrder({ ...order, status })
+    } catch {
+      toast.error('No se pudo actualizar')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div className="rounded-lg bg-card p-12 text-center" style={{ boxShadow: 'var(--shadow-sm)' }}>
+        <p className="text-sm text-muted-foreground">Pedido no encontrado.</p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link href="/admin/orders">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver a pedidos
+          </Link>
+        </Button>
+      </div>
+    )
+  }
+
+  const items = Array.isArray(order.items) ? order.items : []
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button asChild size="icon" variant="ghost">
+            <Link href="/admin/orders">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight">
+              Pedido #{order.id.slice(-8).toUpperCase()}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {new Date(order.createdAt).toLocaleString('es-CO')}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Estado:</span>
+          <Select
+            value={order.status}
+            onValueChange={(v) => changeStatus(v as OrderStatus)}
+            disabled={updating}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PENDING">Recibido</SelectItem>
+              <SelectItem value="CONFIRMED">Preparando</SelectItem>
+              <SelectItem value="SHIPPED">Enviado</SelectItem>
+              <SelectItem value="DELIVERED">Entregado</SelectItem>
+              <SelectItem value="CANCELLED">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div
+        className="rounded-lg bg-card p-6"
+        style={{ boxShadow: 'var(--shadow-sm)' }}
+      >
+        <h2 className="mb-5 font-display text-base font-semibold">Seguimiento</h2>
+        <OrderTimeline status={order.status} />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Items */}
+        <div
+          className="rounded-lg bg-card p-5 lg:col-span-2"
+          style={{ boxShadow: 'var(--shadow-sm)' }}
+        >
+          <h2 className="mb-4 font-display text-base font-semibold">Productos</h2>
+          <div className="space-y-3">
+            {items.map((it) => (
+              <div
+                key={it.id}
+                className="flex items-center gap-3 rounded-md border p-3"
+              >
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                  {it.imageUrl && (
+                    <Image
+                      src={it.imageUrl}
+                      alt={it.name}
+                      fill
+                      className="object-cover"
+                      sizes="56px"
+                    />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{it.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatPrice(it.price)} × {it.quantity}
+                  </p>
+                </div>
+                <p className="font-mono font-semibold">
+                  {formatPrice(it.price * it.quantity)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 flex items-center justify-between border-t pt-4">
+            <span className="font-display text-lg font-semibold">Total</span>
+            <span className="font-mono text-xl font-bold text-primary">
+              {formatPrice(order.total)}
+            </span>
+          </div>
+        </div>
+
+        {/* Customer info */}
+        <div
+          className="rounded-lg bg-card p-5"
+          style={{ boxShadow: 'var(--shadow-sm)' }}
+        >
+          <h2 className="mb-4 font-display text-base font-semibold">Cliente</h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-3">
+              <User className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Nombre</p>
+                <p className="font-medium">
+                  {order.customerName ?? order.user?.name ?? 'Invitado'}
+                </p>
+              </div>
+            </div>
+            {order.user?.email && (
+              <div className="flex items-start gap-3">
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="font-medium">{order.user.email}</p>
+                </div>
+              </div>
+            )}
+            {order.customerPhone && (
+              <div className="flex items-start gap-3">
+                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Teléfono</p>
+                  <p className="font-medium">{order.customerPhone}</p>
+                </div>
+              </div>
+            )}
+            <div className="flex items-start gap-3">
+              <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div>
+                <p className="text-xs text-muted-foreground">Fecha</p>
+                <p className="font-medium">
+                  {new Date(order.createdAt).toLocaleString('es-CO')}
+                </p>
+              </div>
+            </div>
+            {order.whatsappSent && (
+              <div className="flex items-start gap-3">
+                <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                <div>
+                  <p className="text-xs text-muted-foreground">Método</p>
+                  <p className="font-medium">Pedido por WhatsApp</p>
+                </div>
+              </div>
+            )}
+            {order.notes && (
+              <div className="rounded-md bg-secondary p-3">
+                <p className="mb-1 text-xs font-semibold text-muted-foreground">
+                  Notas
+                </p>
+                <p className="text-sm">{order.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
