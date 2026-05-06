@@ -20,8 +20,8 @@ export async function GET() {
 
   const totalOrders = orders.length
   const totalSales = orders
-    .filter((o) => o.status !== 'CANCELLED')
-    .reduce((sum, o) => sum + o.total, 0)
+  .filter((o: any) => o.status !== 'CANCELLED')
+  .reduce((sum: number, o: any) => sum + o.total, 0)
 
   // Monthly revenue for current year
   const year = new Date().getFullYear()
