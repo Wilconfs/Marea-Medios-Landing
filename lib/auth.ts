@@ -25,14 +25,19 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase() },
         })
+        
         if (!user) return null
+        
         const ok = await bcrypt.compare(credentials.password, user.passwordHash)
         if (!ok) return null
+
+        // IMPORTANTE: Retornar el tenantId aquí para que el callback JWT pueda verlo
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          tenantId: user.tenantId, 
         }
       },
     }),
@@ -42,16 +47,18 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = (user as any).id
         token.role = (user as any).role
+        token.tenantId = (user as any).tenantId // Guardamos el tenantId en el token
       }
       return token
     },
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = token.id as string
-        session.user.role = token.role as 'SUPERADMIN' | 'ADMIN' | 'CLIENTE'
+        session.user.role = token.role as any
+        (session.user as any).tenantId = token.tenantId // Pasamos el tenantId a la sesión
       }
       return session
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET, // Coma añadida aquí
 }

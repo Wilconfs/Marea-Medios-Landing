@@ -69,7 +69,7 @@ export function FlashSaleSection({ products }: { products: Product[] }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {safeProducts.slice(0, 4).map((p, i) => (
+        {safeProducts.slice(0, 8).map((p, i) => (
           <ProductCard key={p?.id} product={p} index={i} />
         ))}
       </div>

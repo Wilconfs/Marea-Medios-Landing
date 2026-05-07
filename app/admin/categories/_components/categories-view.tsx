@@ -116,8 +116,8 @@ export function CategoriesView() {
     setSubmitting(true)
     try {
       const url = editing
-        ? `/api/admin/categories/${editing.id}`
-        : '/api/admin/categories'
+        ? `/api/categories/${editing.id}`
+        : '/api/categories'
       const method = editing ? 'PATCH' : 'POST'
       const res = await fetch(url, {
         method,
@@ -146,7 +146,7 @@ export function CategoriesView() {
     const id = deleting.id
     setDeleting(null)
     try {
-      const res = await fetch(`/api/admin/categories/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         if (err.error === 'has_products') {

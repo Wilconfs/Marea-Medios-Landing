@@ -1,75 +1,102 @@
-import { NextResponse } from 'next/server'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
-const createSchema = z.object({
-  name: z.string().min(1).max(200),
-  description: z.string().min(1).max(2000),
-  price: z.number().positive(),
-  originalPrice: z.number().positive().nullable().optional(),
-  discount: z.number().int().min(0).max(100).nullable().optional(),
-  rating: z.number().min(0).max(5).optional(),
-  soldCount: z.number().int().min(0).optional(),
-  stock: z.number().int().min(0),
-  imageUrl: z.string().min(1),
-  categoryId: z.string().min(1),
-  isActive: z.boolean().optional(),
-  isFlashSale: z.boolean().optional(),
-})
+// 1. Función para detectar la tienda (Tenant)
+async function getTenantContext() {
+  const headerList = headers()
+  const host = headerList.get('host')
+  
+  // Extraemos el subdominio (slug)
+  const parts = host?.split('.') || []
+  const slug = parts.length > 1 ? parts[0] : null
+  
+  if (!slug) return null
 
-// List all products (admin view: includes inactive)
-// AUXILIAR puede ver (solo lectura)
-export async function GET() {
-  const auth = await requireRole(['SUPERADMIN', 'ADMIN', 'AUXILIAR'])
-  if (auth.error) {
-    return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
-  }
-
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: { category: true },
+  return await prisma.tenant.findUnique({
+    where: { slug }
   })
-
-  return NextResponse.json(products)
 }
 
-export async function POST(req: Request) {
-  // AUXILIAR NO puede crear productos
-  const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
-  if (auth.error) {
-    return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
-  }
-
+// 2. LISTAR productos (Filtrados por tienda)
+export async function GET() {
   try {
-    const body = await req.json()
-    const data = createSchema.parse(body)
+    const auth = await requireRole(['SUPERADMIN', 'ADMIN', 'AUXILIAR'])
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: 403 })
+    }
 
-    const created = await prisma.product.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        originalPrice: data.originalPrice ?? null,
-        discount: data.discount ?? null,
-        rating: data.rating ?? 0,
-        soldCount: data.soldCount ?? 0,
-        stock: data.stock,
-        imageUrl: data.imageUrl,
-        categoryId: data.categoryId,
-        isActive: data.isActive ?? true,
-        isFlashSale: data.isFlashSale ?? false,
+    const tenant = await getTenantContext()
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tenant no encontrado' }, { status: 404 })
+    }
+
+    const products = await prisma.product.findMany({
+      where: {
+        tenantId: tenant.id // FILTRO CRÍTICO
       },
+      include: {
+        category: true 
+      },
+      orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json(created, { status: 201 })
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: 'invalid_input', details: err.errors }, { status: 400 })
+    return NextResponse.json(products)
+  } catch (error) {
+    console.error('[ADMIN_PRODUCTS_GET]', error)
+    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
+  }
+}
+
+// 3. CREAR producto (Vinculado a la tienda)
+export async function POST(req: NextRequest) {
+  try {
+    const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: 403 })
     }
-    console.error('[admin/products POST]', err)
-    return NextResponse.json({ error: 'server_error' }, { status: 500 })
+
+    const tenant = await getTenantContext()
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tienda no identificada' }, { status: 400 })
+    }
+
+    const body = await req.json()
+    
+    // Ajustamos los nombres de los campos según lo que envía tu formulario
+    const { 
+      name, 
+      description, 
+      price, 
+      imageUrl, // Asegúrate de usar imageUrl si así viene del form
+      categoryId, 
+      isActive,
+      stock 
+    } = body
+
+    if (!name || !price || !categoryId) {
+      return NextResponse.json({ error: 'Campos obligatorios faltantes' }, { status: 400 })
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        name,
+        description,
+        price: parseFloat(price.toString()),
+        imageUrl: imageUrl, 
+        categoryId,
+        isActive: isActive ?? true,
+        stock: parseInt(stock?.toString()) || 0,
+        tenantId: tenant.id // ASIGNACIÓN OBLIGATORIA
+      }
+    })
+
+    return NextResponse.json(product, { status: 201 })
+  } catch (error) {
+    console.error('[ADMIN_PRODUCTS_POST]', error)
+    return NextResponse.json({ error: 'Internal Error' }, { status: 500 })
   }
 }

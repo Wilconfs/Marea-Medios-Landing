@@ -52,8 +52,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <ConditionalChrome>{children}</ConditionalChrome>
-            <Toaster richColors position="top-right" />
+          <ConditionalChrome>{children}</ConditionalChrome>
+          <Toaster richColors position="top-right" duration={2000} /> 
           </AuthProvider>
           <ChunkLoadErrorHandler />
         </ThemeProvider>

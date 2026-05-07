@@ -6,6 +6,12 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminUsersPage() {
   const session = await getCurrentSession()
-  if (session?.user?.role !== 'SUPERADMIN') redirect('/admin')
+  
+  // CORRECCIÓN: Permitir la entrada si es SUPERADMIN o ADMIN
+  const role = session?.user?.role
+  if (role !== 'SUPERADMIN' && role !== 'ADMIN') {
+    redirect('/admin')
+  }
+
   return <UsersView />
 }

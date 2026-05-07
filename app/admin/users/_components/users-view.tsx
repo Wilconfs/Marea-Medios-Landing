@@ -117,14 +117,19 @@ export function UsersView() {
 
   // Roles disponibles según el usuario actual
   function getAvailableRoles(): Role[] {
+    // Si soy SUPERADMIN, puedo asignar cualquier rol
     if (isSuperAdmin) return ['SUPERADMIN', 'ADMIN', 'AUXILIAR', 'CLIENTE']
+    
+    // Si soy ADMIN, NO puedo asignar SUPERADMIN (solo de Admin para abajo)
     return ['ADMIN', 'AUXILIAR', 'CLIENTE']
   }
 
   function getAssignableRoles(targetUser: User): Role[] {
     const roles = getAvailableRoles()
-    // Si el target es SUPERADMIN y yo no soy SUPERADMIN, no puedo cambiarlo
-    if (targetUser.role === 'SUPERADMIN' && !isSuperAdmin) return [targetUser.role]
+    // Si el usuario objetivo es SUPERADMIN y yo no lo soy, 
+    // solo devuelvo su rol actual para que el select quede bloqueado o sin opciones extra.
+    if (targetUser.role === 'SUPERADMIN' && !isSuperAdmin) return ['SUPERADMIN']
+    
     return roles
   }
 

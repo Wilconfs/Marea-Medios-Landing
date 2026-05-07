@@ -9,6 +9,7 @@ import {
   ShoppingBag,
   Footprints,
   LayoutGrid,
+  Package,
   type LucideIcon,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -21,6 +22,7 @@ const iconMap: Record<string, LucideIcon> = {
   ShoppingBag,
   Footprints,
   LayoutGrid,
+  package: Package,
 }
 
 interface Category {

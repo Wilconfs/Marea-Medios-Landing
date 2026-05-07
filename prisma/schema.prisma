@@ -1,12 +1,12 @@
 generator client {
-    provider = "prisma-client-js"
-    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
-    output   = "../node_modules/.prisma/client"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+  output        = "../node_modules/.prisma/client"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -24,15 +24,38 @@ enum OrderStatus {
   CANCELLED
 }
 
+// 1. Nueva tabla para los Clientes/Empresas
+model Tenant {
+  id        String     @id @default(cuid())
+  name      String     // Nombre del negocio
+  slug      String     @unique // Para la URL (ej: taller-perez)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relaciones
+  users      User[]
+  categories Category[]
+  products   Product[]
+  orders     Order[]
+  settings   Setting[]
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
   email        String   @unique
   passwordHash String
   role         Role     @default(CLIENTE)
+  
+  // Relación con Tenant (Opcional para permitir la migración inicial)
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   orders       Order[]
+
+  @@index([tenantId])
 }
 
 model Category {
@@ -40,14 +63,21 @@ model Category {
   name      String
   slug      String    @unique
   icon      String
+  
+  // Relación con Tenant
+  tenantId  String?
+  tenant    Tenant?   @relation(fields: [tenantId], references: [id])
+  
   createdAt DateTime  @default(now())
   products  Product[]
+
+  @@index([tenantId])
 }
 
 model Product {
   id            String   @id @default(cuid())
   name          String
-  description   String
+  description   String   @db.Text
   price         Float
   originalPrice Float?
   discount      Int?
@@ -57,13 +87,20 @@ model Product {
   imageUrl      String
   isActive      Boolean  @default(true)
   isFlashSale   Boolean  @default(false)
+  
+  // Relaciones
   categoryId    String
   category      Category @relation(fields: [categoryId], references: [id])
+  
+  tenantId      String?
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([categoryId])
   @@index([isActive])
+  @@index([tenantId])
 }
 
 model Order {
@@ -76,18 +113,31 @@ model Order {
   whatsappSent  Boolean     @default(false)
   customerName  String?
   customerPhone String?
-  notes         String?
+  notes         String?     @db.Text
+
+  // Relación con Tenant
+  tenantId      String?
+  tenant        Tenant?     @relation(fields: [tenantId], references: [id])
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   @@index([userId])
   @@index([status])
+  @@index([tenantId])
 }
 
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
   value     String
+  
+  // Las configuraciones también deben ser por cliente
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
 }

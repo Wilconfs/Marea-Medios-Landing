@@ -3,7 +3,33 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
+
+
 async function main() {
+
+  // 1. Crear el primer Cliente/Tenant
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: 'tienda-uno' },
+    update: {},
+    create: { name: "Mi Tienda SaaS", slug: "tienda-uno" }
+  })
+
+  // 2. Crear el Usuario Admin vinculado a ese cliente
+  const hashedPassword = await bcrypt.hash('admin123', 10)
+  await prisma.user.upsert({
+    where: { email: 'admin@test.com' },
+    update: {},
+    create: {
+      name: 'Admin SaaS',
+      email: 'admin@test.com',
+      passwordHash: hashedPassword,
+      role: 'ADMIN',
+      tenantId: tenant.id // Esto es clave
+    }
+  })
+
+  console.log("Seed completado: Cliente y Admin creados.")
+
   console.log('🌱 Seeding database...')
 
   // ---- Users ----
@@ -223,3 +249,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
+
+  

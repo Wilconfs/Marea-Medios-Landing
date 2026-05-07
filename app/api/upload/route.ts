@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { requireRole } from '@/lib/auth-helpers'
-import { generatePresignedUploadUrl, deleteFile, getPublicUrl } from '@/lib/s3'
+import path from 'path'
+import { writeFile, mkdir, unlink } from 'fs/promises'
 
 export const dynamic = 'force-dynamic'
 
-// Generate presigned upload URL
+/**
+ * POST: Subida de archivos al servidor local (XAMPP o Hostinger)
+ */
 export async function POST(req: Request) {
+  // Validación de seguridad por roles
   const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
   if (auth.error) {
     return NextResponse.json(
@@ -15,27 +19,46 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { fileName, contentType } = await req.json()
-    if (!fileName || !contentType) {
-      return NextResponse.json({ error: 'missing_fields' }, { status: 400 })
+    const formData = await req.formData()
+    const file = formData.get('file') as File
+    
+    if (!file) {
+      return NextResponse.json({ error: 'missing_file' }, { status: 400 })
     }
 
-    const { uploadUrl, cloud_storage_path } = await generatePresignedUploadUrl(
-      fileName,
-      contentType,
-      true, // product images are public
-    )
+    // Convertimos el archivo a Buffer
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
 
-    const publicUrl = getPublicUrl(cloud_storage_path)
+    // Definimos la ruta de la carpeta: public/uploads
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+    
+    // Nos aseguramos de que la carpeta exista
+    await mkdir(uploadDir, { recursive: true })
 
-    return NextResponse.json({ uploadUrl, cloud_storage_path, publicUrl })
+    // Creamos un nombre único para evitar colisiones
+    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '_')}`
+    const filePath = path.join(uploadDir, fileName)
+
+    // Guardar el archivo en el disco (Usando el buffer directamente)
+    await writeFile(filePath, buffer)
+
+    // La URL pública que guardaremos en la DB
+    const publicUrl = `/uploads/${fileName}`
+
+    return NextResponse.json({ 
+      publicUrl, 
+      cloud_storage_path: publicUrl // Mantenemos el nombre para compatibilidad con el Frontend
+    })
   } catch (err) {
-    console.error('[upload POST]', err)
+    console.error('[upload POST local]', err)
     return NextResponse.json({ error: 'server_error' }, { status: 500 })
   }
 }
 
-// Delete file
+/**
+ * DELETE: Eliminar archivos físicamente del servidor
+ */
 export async function DELETE(req: Request) {
   const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
   if (auth.error) {
@@ -51,10 +74,21 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'missing_path' }, { status: 400 })
     }
 
-    await deleteFile(cloud_storage_path)
+    // Normalizamos la ruta para evitar errores con el "/" inicial
+    const cleanPath = cloud_storage_path.startsWith('/') 
+      ? cloud_storage_path.substring(1) 
+      : cloud_storage_path;
+
+    // Construimos la ruta absoluta al archivo
+    const filePath = path.join(process.cwd(), 'public', cleanPath)
+    
+    // Intentamos borrar el archivo
+    await unlink(filePath)
+    
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('[upload DELETE]', err)
-    return NextResponse.json({ error: 'server_error' }, { status: 500 })
+    console.error('[upload DELETE local]', err)
+    // Devolvemos ok: true para no romper el flujo del frontend si el archivo ya no existía
+    return NextResponse.json({ ok: true, warning: 'file_not_found' })
   }
 }
