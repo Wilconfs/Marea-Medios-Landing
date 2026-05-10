@@ -96,7 +96,7 @@ export default async function HomePage(props: PageProps) {
         {products.length === 0 ? (
           <div className="p-10 text-center bg-gray-50 rounded-lg">
              <p>No hay productos vinculados a esta tienda.</p>
-             <p className="text-xs text-gray-400 mt-2">ID buscado: {tenantId}</p>
+             {/* <p className="text-xs text-muted-foreground">ID buscado: {tenantId}</p> */}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
