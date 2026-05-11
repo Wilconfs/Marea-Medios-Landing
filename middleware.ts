@@ -14,8 +14,8 @@ export function middleware(request: NextRequest) {
     path.startsWith('/admin') ||
     path.startsWith('/orders') || 
     path.startsWith('/cart')
-
-  const rootDomains = ['localhost:3000', 'tuapp.com']
+  // Línea 18 original: const rootDomains = ['localhost:3000', 'tuapp.com']
+  const rootDomains = ['localhost:3000', 'mareamedios.com', 'www.mareamedios.com']
   const isRootDomain = rootDomains.some(domain => hostname === domain)
 
   // CORRECCIÓN: Usar el nombre de variable correcto aquí
