@@ -218,14 +218,14 @@ export function ProductFormDialog({
               </div>
               <Switch checked={data.isActive} onCheckedChange={(v) => update('isActive', v)} />
             </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+            {/* <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
               <div className="space-y-0.5">
                 <Label className="text-base font-medium">Flash Sale</Label>
                 <p className="text-sm text-muted-foreground">Destacar en oferta flash</p>
               </div>
               <Switch checked={data.isFlashSale} onCheckedChange={(v) => update('isFlashSale', v)} />
-            </div>
+            </div> 
+            */}
           </div>
 
           <DialogFooter>

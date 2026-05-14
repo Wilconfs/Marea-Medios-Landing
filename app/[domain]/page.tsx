@@ -96,68 +96,94 @@ export default async function HomePage(props: PageProps) {
   console.log("Total Productos:", products.length);
 
   return (
-    // CAMBIO: Fondo gris azulado muy suave para resaltar las cards blancas
-    <div className="min-h-screen bg-[#f1f5f9]/50"> 
-      <div className="container-page space-y-12 py-10">
+    <div className="min-h-screen bg-[#f9fafb]"> {/* Fondo gris muy suave para dar contraste */}
+      <div className="container-page space-y-16 py-10">
         
-        {/* Banner con sombra suave y bordes más redondeados */}
-        <div className="rounded-3xl overflow-hidden shadow-2xl shadow-blue-900/10 transition-all duration-500">
+        {/* 1. SECCIÓN HERO: Banner Principal */}
+        <section className="rounded-3xl overflow-hidden shadow-xl shadow-blue-900/5">
           <HeroBanner />
-        </div>
+        </section>
 
-        {/* Categorías con un contenedor más limpio */}
-        <section className="relative z-10 -mt-6">
-          <div className="rounded-2xl bg-white/80 backdrop-blur-md p-2 shadow-sm border border-white">
+        {/* 2. SECCIÓN CATEGORÍAS: Ahora con Título y Contexto */}
+        <section className="space-y-6">
+          <div className="flex flex-col items-center text-center space-y-2">
+            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
+              Explora por Categorías
+            </h2>
+            <p className="text-slate-500 max-w-md">
+              Encuentra exactamente lo que necesitas navegando en nuestras colecciones especializadas.
+            </p>
+          </div>
+          
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
             <CategoryRow categories={categories} activeSlug={categoryFilter} />
           </div>
         </section>
 
-        {/* Sección de Ofertas - Diseño tipo "Bento Box" */}
+        {/* 3. SECCIÓN DE OFERTAS: (Si existe) */}
         {showFlashSection && flashProducts.length > 0 && (
-          <div className="rounded-3xl bg-white p-8 shadow-sm border border-slate-200/60 transition-hover hover:shadow-md">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-slate-800">Ofertas Imperdibles</h3>
-              <div className="h-1 flex-1 mx-4 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-primary w-1/3 animate-pulse" />
-              </div>
-            </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-3xl border border-blue-100">
             <FlashSaleSection products={flashProducts as any} />
           </div>
         )}
 
-        {/* Listado de Productos con cabecera premium */}
+        {/* 4. SECCIÓN DE PRODUCTOS: Con jerarquía premium */}
         <section id="productos" className="space-y-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-6">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-widest">
-                <Sparkles className="h-4 w-4" />
-                <span>Novedades</span>
+          <div className="flex items-center justify-between border-b border-slate-200 pb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/10 p-2 rounded-xl">
+                <Sparkles className="h-6 w-6 text-primary" />
               </div>
-              <h2 className="text-3xl font-black text-slate-900">
-                Explora la Colección
-              </h2>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">Nuestros Productos</h2>
+                <p className="text-sm text-slate-500">Selección exclusiva de {tenant.name}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">
-              <span>{products.length} productos encontrados</span>
+            
+            {/* Badge de cantidad para llenar espacio visual */}
+            <div className="hidden sm:block">
+              <span className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-full text-sm font-semibold shadow-sm">
+                {products.length} Artículos disponibles
+              </span>
             </div>
           </div>
 
           {products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-20 bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-inner">
-               <div className="bg-slate-50 p-4 rounded-full mb-4">
-                 <Sparkles className="h-10 w-10 text-slate-300" />
-               </div>
-               <p className="text-slate-500 font-bold text-xl text-center">No encontramos lo que buscas</p>
-               <p className="text-sm text-slate-400 mt-2">Intenta con otra categoría o término de búsqueda.</p>
+            <div className="p-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
+               <p className="text-slate-400 font-medium">No se encontraron productos en esta categoría.</p>
             </div>
           ) : (
-            // Aumento de gap para que las imágenes respiren
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-5 xl:gap-8">
               {products.map((p, i) => (
                 <ProductCard key={p.id} product={p as any} index={i} />
               ))}
             </div>
           )}
+        </section>
+
+        {/* 5. SECCIÓN EXTRA: Banner de confianza (FOOTER VISUAL) */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
+          <div className="flex items-center gap-4 p-4">
+            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">🚚</div>
+            <div>
+              <h4 className="font-bold text-slate-800">Envíos Rápidos</h4>
+              <p className="text-xs text-slate-500">Recibe tus compras en tiempo récord.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4">
+            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">🛡️</div>
+            <div>
+              <h4 className="font-bold text-slate-800">Pago Seguro</h4>
+              <p className="text-xs text-slate-500">Tus transacciones están protegidas.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-4">
+            <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">⭐</div>
+            <div>
+              <h4 className="font-bold text-slate-800">Calidad Garantizada</h4>
+              <p className="text-xs text-slate-500">Productos seleccionados cuidadosamente.</p>
+            </div>
+          </div>
         </section>
       </div>
     </div>

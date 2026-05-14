@@ -17,7 +17,7 @@ const SLIDES = [
     description: 'Renueva tu estilo con descuentos imperdibles en moda, calzado y accesorios.',
     image: 'https://cdn.abacus.ai/images/9ab4aeaa-f741-4054-b137-a7ea64a06f41.png',
     color: 'from-blue-600 via-blue-700 to-blue-900',
-    link: '/?flashSale=true'
+    link: '/#productos'
   },
   {
     id: 2,
@@ -83,9 +83,6 @@ export function HeroBanner() {
                   <Link href={SLIDES[current].link}>
                     Comprar ahora <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="border-white/40 bg-white/10 text-white hover:bg-white/20 backdrop-blur-sm">
-                  <Link href="#productos">Explorar</Link>
                 </Button>
               </div>
             </motion.div>
