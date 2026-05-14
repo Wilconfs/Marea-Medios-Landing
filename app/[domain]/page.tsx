@@ -5,6 +5,8 @@ import { FlashSaleSection } from '@/components/flash-sale-section'
 import { ProductCard } from '@/components/product-card'
 import { Sparkles } from 'lucide-react'
 import { notFound } from 'next/navigation'
+import { WhatsappButton } from '@/components/whatsapp-button'
+import { ShieldCheck, RefreshCw, MessageCircle } from 'lucide-react'
 
 // Esto asegura que Next.js no guarde en caché la página y siempre consulte la BD
 export const dynamic = 'force-dynamic'
@@ -162,30 +164,56 @@ export default async function HomePage(props: PageProps) {
         </section>
 
         {/* 5. SECCIÓN EXTRA: Banner de confianza (FOOTER VISUAL) */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-slate-200">
-          <div className="flex items-center gap-4 p-4">
-            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">🚚</div>
-            <div>
-              <h4 className="font-bold text-slate-800">Envíos Rápidos</h4>
-              <p className="text-xs text-slate-500">Recibe tus compras en tiempo récord.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 p-4">
-            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">🛡️</div>
-            <div>
-              <h4 className="font-bold text-slate-800">Pago Seguro</h4>
-              <p className="text-xs text-slate-500">Tus transacciones están protegidas.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 p-4">
-            <div className="h-12 w-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">⭐</div>
-            <div>
-              <h4 className="font-bold text-slate-800">Calidad Garantizada</h4>
-              <p className="text-xs text-slate-500">Productos seleccionados cuidadosamente.</p>
-            </div>
+
+{/* SECCIÓN DE BENEFICIOS AJUSTADA */}
+<section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-slate-100">
+  
+  {/* Envíos Rápidos */}
+  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
+    <div className="bg-blue-50 p-3 rounded-2xl mb-4">
+      <ShieldCheck className="h-8 w-8 text-blue-600" />
+    </div>
+    <h4 className="font-bold text-slate-800 text-lg">Envíos Rápidos</h4>
+    <p className="text-sm text-slate-500 mt-2">Recibe tus compras en tiempo récord.</p>
+  </div>
+
+  {/* Pago Seguro */}
+  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
+    <div className="bg-purple-50 p-3 rounded-2xl mb-4">
+      <RefreshCw className="h-8 w-8 text-purple-600" />
+    </div>
+    <h4 className="font-bold text-slate-800 text-lg">Pago Seguro</h4>
+    <p className="text-sm text-slate-500 mt-2">Tus transacciones están protegidas.</p>
+  </div>
+
+  {/* Calidad Garantizada */}
+  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
+    <div className="bg-green-50 p-3 rounded-2xl mb-4">
+      <MessageCircle className="h-8 w-8 text-green-600" />
+    </div>
+    <h4 className="font-bold text-slate-800 text-lg">Calidad Garantizada</h4>
+    <p className="text-sm text-slate-500 mt-2">Productos seleccionados cuidadosamente.</p>
+  </div>
+</section>
+        <section className="rounded-3xl bg-primary p-10 text-center text-white shadow-xl">
+          <h3 className="text-2xl font-bold">¡Únete a nuestra comunidad!</h3>
+          <p className="mt-2 text-blue-100">Recibe ofertas exclusivas y novedades antes que nadie.</p>
+          <div className="mx-auto mt-6 flex max-w-md gap-2">
+            <input 
+              type="email" 
+              placeholder="Tu correo electrónico" 
+              className="flex-1 rounded-xl border-none px-4 py-3 text-slate-900 focus:ring-2 focus:ring-accent"
+            />
+            <button className="rounded-xl bg-slate-900 px-6 py-3 font-bold transition-colors hover:bg-slate-800">
+              Suscribirme
+            </button>
           </div>
         </section>
-      </div>
-    </div>
-  )
+              </div>
+              <div className="container-page space-y-16 py-10">
+            {/* ... tus otras secciones ... */}
+            <WhatsappButton /> 
+          </div>
+            </div>
+          )
 }

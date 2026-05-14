@@ -3,7 +3,7 @@ import { Sparkles, Mail, Phone, MapPin } from 'lucide-react'
 
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-border/60 bg-secondary/40">
+    <footer className="border-t border-border/60 bg-secondary/40">
       <div className="container-page py-10">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
