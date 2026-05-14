@@ -57,23 +57,15 @@ export function ProductCard({ product, index = 0 }: { product: Product; index?: 
           onMouseEnter={(e) => (e.currentTarget.style.boxShadow = 'var(--shadow-lg)')}
           onMouseLeave={(e) => (e.currentTarget.style.boxShadow = 'var(--shadow-sm)')}
         >
-          <div className="relative aspect-square overflow-hidden bg-muted">
-            {product?.imageUrl ? (
+            <div className="relative aspect-square w-full overflow-hidden rounded-t-xl bg-muted">
               <Image
-                src={product.imageUrl}
-                alt={product?.name ?? 'Producto'}
+                src={product.imageUrl?.split(',')[0] || '/placeholder.png'}
+                alt={product.name}
                 fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                className="object-cover transition-transform duration-slow group-hover:scale-105"
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
+                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
               />
-            ) : null}
-            {product?.discount ? (
-              <span className="absolute left-2 top-2 rounded-md bg-discount px-2 py-0.5 text-xs font-bold text-white shadow">
-                -{product.discount}%
-              </span>
-            ) : null}
-          </div>
-
+            </div>
           <div className="flex flex-1 flex-col gap-2 p-3">
             <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug">
               {product?.name ?? ''}

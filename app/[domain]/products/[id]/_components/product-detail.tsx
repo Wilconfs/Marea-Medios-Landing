@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Star, ShoppingCart, Plus, Minus, Truck, ShieldCheck, Package } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Star, ShoppingCart, Plus, Minus, Truck, ShieldCheck, Package, ChevronLeft, ChevronRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { useCart } from '@/lib/cart-store'
 import { formatPrice } from '@/lib/format'
@@ -29,6 +29,13 @@ export function ProductDetail({ product }: { product: Product }) {
   const [qty, setQty] = useState(1)
   const addItem = useCart((s) => s?.addItem)
   const maxStock = Math.max(product?.stock ?? 99, 1)
+
+  // Lógica del Carrusel: Separar imágenes y manejar el índice
+  const images = product?.imageUrl?.split(',').filter(url => url.trim() !== '') || ['/placeholder.png']
+  const [currentImgIdx, setCurrentImgIdx] = useState(0)
+
+  const nextImage = () => setCurrentImgIdx((prev) => (prev + 1) % images.length)
+  const prevImage = () => setCurrentImgIdx((prev) => (prev - 1 + images.length) % images.length)
 
   const handleAdd = () => {
     addItem?.(
@@ -60,29 +67,86 @@ export function ProductDetail({ product }: { product: Product }) {
 
   return (
     <div className="grid gap-8 rounded-lg bg-card p-5 sm:p-7 lg:grid-cols-2" style={{ boxShadow: 'var(--shadow-sm)' }}>
+      {/* Columna Izquierda: Carrusel de Imágenes */}
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
-        className="relative aspect-square overflow-hidden rounded-lg bg-muted"
+        className="space-y-4"
       >
-        {product?.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={product?.name ?? 'Producto'}
-            fill
-            sizes="(max-width: 1024px) 100vw, 500px"
-            className="object-cover"
-            priority
-          />
-        ) : null}
-        {product?.discount ? (
-          <span className="absolute left-3 top-3 rounded-md bg-discount px-3 py-1 text-sm font-bold text-white shadow">
-            -{product.discount}% OFF
-          </span>
-        ) : null}
+        {/* Recuadro de Imagen Principal (Ajustado) */}
+        <div className="group relative aspect-square overflow-hidden rounded-lg bg-muted shadow-inner border">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentImgIdx}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="relative h-full w-full"
+            >
+              <Image
+                src={images[currentImgIdx]}
+                alt={product.name}
+                fill
+                // CAMBIO CLAVE AQUÍ: object-cover para ocupar todo el recuadro, sin padding
+                className="object-cover" 
+                priority
+              />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Flechas de Navegación (Solo si hay más de una imagen) */}
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={prevImage}
+                className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white"
+              >
+                <ChevronLeft className="h-6 w-6 text-foreground" />
+              </button>
+              <button
+                onClick={nextImage}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/70 p-2 shadow-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white"
+              >
+                <ChevronRight className="h-6 w-6 text-foreground" />
+              </button>
+            </>
+          )}
+
+          {/* Etiqueta de Descuento (Mantenida) */}
+          {product?.discount ? (
+            <span className="absolute left-3 top-3 rounded-md bg-discount px-3 py-1 text-sm font-bold text-white shadow">
+              -{product.discount}% OFF
+            </span>
+          ) : null}
+        </div>
+
+        {/* Galería de Miniaturas (Sección añadida para navegar) */}
+        {images.length > 1 && (
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {images.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentImgIdx(i)}
+                className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-md border-2 bg-pink-50 transition-all ${
+                  i === currentImgIdx ? 'border-primary ring-1 ring-primary' : 'border-border hover:opacity-100 opacity-70'
+                }`}
+              >
+                <Image
+                  src={img}
+                  alt={`${product.name} thumbnail ${i}`}
+                  fill
+                  // Mantenemos object-contain para que la miniatura se vea completa
+                  className="object-contain p-2"
+                />
+              </button>
+            ))}
+          </div>
+        )}
       </motion.div>
 
+      {/* Columna Derecha: Detalles (Se mantiene igual tu lógica) */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}

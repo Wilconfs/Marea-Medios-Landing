@@ -75,7 +75,7 @@ export function DashboardView() {
 
   return (
     <div className="space-y-6">
-      {/* KPIs */}
+      {/* KPIs - Usando 'label' para evitar errores de TypeScript */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           label="Clientes"
@@ -153,7 +153,8 @@ export function DashboardView() {
                   <div className="relative h-10 w-10 overflow-hidden rounded-md bg-muted">
                     {p.imageUrl && (
                       <Image
-                        src={p.imageUrl}
+                        /* LA CORRECCIÓN: split para manejar múltiples URLs */
+                        src={p.imageUrl.split(',')[0]}
                         alt={p.name}
                         fill
                         className="object-cover"
@@ -181,6 +182,7 @@ export function DashboardView() {
           </div>
         </div>
 
+        {/* Recent Orders */}
         <div
           className="rounded-lg bg-card p-5 lg:col-span-2"
           style={{ boxShadow: 'var(--shadow-sm)' }}

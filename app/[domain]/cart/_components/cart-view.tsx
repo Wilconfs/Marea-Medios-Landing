@@ -147,11 +147,12 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
                 >
                   {item?.imageUrl ? (
                     <Image
-                      src={item.imageUrl}
-                      alt={item?.name ?? ''}
+                      // Usamos la misma lógica de limpieza de URL
+                      src={item.imageUrl?.split(',')[0] || '/placeholder.png'}
+                      alt={item.name}
                       fill
-                      sizes="112px"
-                      className="object-cover"
+                      className="object-contain p-1"
+                      sizes="80px"
                     />
                   ) : null}
                 </Link>

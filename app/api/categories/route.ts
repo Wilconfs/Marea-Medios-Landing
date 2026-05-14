@@ -5,22 +5,26 @@ import { requireRole } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
-// Función auxiliar para obtener el ID del Tenant basado en el subdominio
+/**
+ * Función auxiliar corregida para extraer el Tenant
+ * Basada en el host completo (ej: tienda1.local)
+ */
 async function getTenantContext() {
-  const headerList = headers()
-  const host = headerList.get('host')
+  const headerList = await headers() // Next.js 15 requiere await para headers
+  const host = headerList.get('host') || ''
   
-  // Extraemos el subdominio (ej: 'tienda-uno' de 'tienda-uno.localhost:3000')
-  const slug = host?.split('.')[0]
+  // Extraemos el dominio eliminando el puerto (ej: "tienda1.local:3000" -> "tienda1.local")
+  const domain = host.split(':')[0]
   
-  if (!slug) return null
+  if (!domain) return null
 
+  // Buscamos el Tenant cuyo slug coincida exactamente con el dominio de la URL
   return await prisma.tenant.findUnique({
-    where: { slug }
+    where: { slug: domain }
   })
 }
 
-// Función para LISTAR categorías del tenant actual
+// GET: Listar categorías filtradas por la tienda actual
 export async function GET() {
   try {
     const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
@@ -35,7 +39,7 @@ export async function GET() {
 
     const categories = await prisma.category.findMany({
       where: {
-        tenantId: tenant.id // Solo listamos las de esta tienda
+        tenantId: tenant.id 
       },
       include: {
         _count: {
@@ -52,7 +56,7 @@ export async function GET() {
   }
 }
 
-// Función para CREAR categorías vinculadas al tenant
+// POST: Crear categorías vinculadas automáticamente al tenant actual
 export async function POST(req: Request) {
   try {
     const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
@@ -68,12 +72,16 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, slug, icon } = body
 
+    if (!name || !slug) {
+      return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
+    }
+
     const category = await prisma.category.create({
       data: {
         name,
         slug,
         icon: icon || 'package',
-        tenantId: tenant.id // <--- ASIGNACIÓN AUTOMÁTICA DEL ID
+        tenantId: tenant.id // Se vincula a la tienda detectada en la URL
       }
     })
 

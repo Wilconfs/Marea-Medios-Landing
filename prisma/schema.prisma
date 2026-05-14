@@ -78,13 +78,13 @@ model Product {
   id            String   @id @default(cuid())
   name          String
   description   String   @db.Text
+  imageUrl      String   @db.Text // ÚNICA LÍNEA PARA IMÁGENES
   price         Float
   originalPrice Float?
   discount      Int?
   rating        Float    @default(0)
   soldCount     Int      @default(0)
   stock         Int      @default(0)
-  imageUrl      String
   isActive      Boolean  @default(true)
   isFlashSale   Boolean  @default(false)
   

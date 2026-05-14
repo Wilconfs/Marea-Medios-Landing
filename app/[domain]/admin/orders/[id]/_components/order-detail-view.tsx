@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { OrderTimeline, type OrderStatus } from '@/components/order-timeline'
 import { formatPrice } from '@/lib/format'
+import { useSession } from 'next-auth/react'
 
 type OrderItem = {
   id: string
@@ -47,7 +48,7 @@ type Order = {
   user: { name: string; email: string } | null
 }
 
-const STATUS_ORDER: OrderStatus[] = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED']
+const STATUS_ORDER: OrderStatus[] = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: 'Recibido',
   CONFIRMED: 'Preparando',
@@ -74,6 +75,8 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [pendingStatus, setPendingStatus] = useState<OrderStatus | null>(null)
+  const { data: session } = useSession()
+  const isReadOnly = session?.user?.role === 'AUXILIAR'
 
   async function load() {
     setLoading(true)
@@ -219,17 +222,17 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
                 key={it.id}
                 className="flex items-center gap-3 rounded-md border p-3"
               >
-                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
-                  {it.imageUrl && (
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-pink-50 flex items-center justify-center">
                     <Image
-                      src={it.imageUrl}
+                      // Tomamos la primera imagen si es una lista separada por comas
+                      src={it.imageUrl?.split(',')[0] || '/placeholder.png'} 
                       alt={it.name}
                       fill
-                      className="object-cover"
-                      sizes="56px"
+                      className="object-contain p-1" // El padding evita que la imagen toque los bordes
+                      sizes="64px"
+                      priority
                     />
-                  )}
-                </div>
+                  </div>
                 <div className="flex-1">
                   <p className="font-medium">{it.name}</p>
                   <p className="text-xs text-muted-foreground">

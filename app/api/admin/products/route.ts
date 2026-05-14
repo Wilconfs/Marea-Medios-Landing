@@ -5,19 +5,22 @@ import { requireRole } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
-// 1. Función para detectar la tienda (Tenant)
+/**
+ * 1. Función para detectar la tienda (Tenant)
+ * Corregida para Next.js 15 y para identificar dominios como 'tienda1.local'
+ */
 async function getTenantContext() {
-  const headerList = headers()
-  const host = headerList.get('host')
+  const headerList = await headers() // En Next 15 headers es asíncrono
+  const host = headerList.get('host') || ''
   
-  // Extraemos el subdominio (slug)
-  const parts = host?.split('.') || []
-  const slug = parts.length > 1 ? parts[0] : null
+  // Extraemos el dominio eliminando el puerto (ej: "tienda1.local:3000" -> "tienda1.local")
+  const domain = host.split(':')[0]
   
-  if (!slug) return null
+  if (!domain) return null
 
+  // Buscamos el Tenant cuyo slug coincida exactamente con el dominio de la URL
   return await prisma.tenant.findUnique({
-    where: { slug }
+    where: { slug: domain }
   })
 }
 
@@ -36,7 +39,7 @@ export async function GET() {
 
     const products = await prisma.product.findMany({
       where: {
-        tenantId: tenant.id // FILTRO CRÍTICO
+        tenantId: tenant.id // FILTRO CRÍTICO: Solo productos de esta tienda
       },
       include: {
         category: true 
@@ -51,7 +54,7 @@ export async function GET() {
   }
 }
 
-// 3. CREAR producto (Vinculado a la tienda)
+// 3. CREAR producto (Vinculado automáticamente a la tienda)
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
@@ -66,12 +69,11 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     
-    // Ajustamos los nombres de los campos según lo que envía tu formulario
     const { 
       name, 
       description, 
       price, 
-      imageUrl, // Asegúrate de usar imageUrl si así viene del form
+      imageUrl, 
       categoryId, 
       isActive,
       stock 
@@ -90,7 +92,7 @@ export async function POST(req: NextRequest) {
         categoryId,
         isActive: isActive ?? true,
         stock: parseInt(stock?.toString()) || 0,
-        tenantId: tenant.id // ASIGNACIÓN OBLIGATORIA
+        tenantId: tenant.id // ASIGNACIÓN OBLIGATORIA DEL TENANT DETECTADO
       }
     })
 

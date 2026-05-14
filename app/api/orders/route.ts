@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { headers } from 'next/headers' // Importante para detectar el host
 import { prisma } from '@/lib/db'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -25,18 +26,41 @@ const orderSchema = z.object({
   whatsappSent: z.boolean().optional(),
 })
 
+// Función para identificar la tienda actual
+async function getTenantContext() {
+  const headerList = await headers()
+  const host = headerList.get('host') || ''
+  const domain = host.split(':')[0]
+  
+  return await prisma.tenant.findUnique({
+    where: { slug: domain }
+  })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
+    
+    // 1. Identificar el Tenant antes de crear la orden
+    const tenant = await getTenantContext()
+    if (!tenant) {
+      return NextResponse.json({ error: 'Tienda no identificada' }, { status: 400 })
+    }
+
     const body = await req.json().catch(() => ({}))
     const parsed = orderSchema.safeParse(body)
+    
     if (!parsed.success) {
       return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
     }
+    
     const data = parsed.data
+
+    // 2. Crear la orden incluyendo el tenantId detectado
     const order = await prisma.order.create({
       data: {
         userId: session?.user?.id ?? null,
+        tenantId: tenant.id, // <--- ESTO ES LO QUE SOLUCIONA EL NULL
         items: data.items as any,
         total: data.total,
         customerName: data.customerName ?? session?.user?.name ?? null,
@@ -47,6 +71,7 @@ export async function POST(req: NextRequest) {
       },
       select: { id: true, createdAt: true, status: true },
     })
+
     return NextResponse.json({ order }, { status: 201 })
   } catch (err) {
     console.error('POST /api/orders', err)

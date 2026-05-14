@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { prisma } from '@/lib/db'
@@ -12,15 +13,31 @@ export default async function ProductPage({
 }: {
   params: { id: string }
 }) {
-  const product = await prisma.product.findUnique({
-    where: { id: params?.id },
+  // Identificamos la tienda actual
+  const headerList = await headers()
+  const host = headerList.get('host') || ''
+  const domain = host.split(':')[0]
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: domain }
+  })
+
+  // Buscamos el producto asegurándonos que pertenezca a esta tienda
+  const product = await prisma.product.findFirst({
+    where: { 
+      id: params?.id,
+      tenantId: tenant?.id // Seguridad Multi-tenant
+    },
     include: { category: true },
   })
+
   if (!product) notFound()
 
+  // Recomendados del mismo tenant y categoría
   const related = await prisma.product.findMany({
     where: {
       isActive: true,
+      tenantId: tenant?.id,
       categoryId: product.categoryId,
       id: { not: product.id },
     },
@@ -30,10 +47,9 @@ export default async function ProductPage({
 
   return (
     <div className="container-page space-y-8 py-6">
+      {/* Breadcrumbs */}
       <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link href="/" className="hover:text-primary">
-          Inicio
-        </Link>
+        <Link href="/" className="hover:text-primary">Inicio</Link>
         <ChevronRight className="h-4 w-4" />
         <Link
           href={`/?category=${product.category?.slug ?? ''}`}
@@ -42,13 +58,15 @@ export default async function ProductPage({
           {product.category?.name ?? ''}
         </Link>
         <ChevronRight className="h-4 w-4" />
-        <span className="truncate text-foreground">{product.name}</span>
+        <span className="truncate text-foreground font-medium">{product.name}</span>
       </nav>
 
+      {/* Componente de detalle con galería */}
       <ProductDetail product={product as any} />
 
+      {/* Sección de relacionados */}
       {related.length > 0 && (
-        <section className="space-y-4">
+        <section className="space-y-6 pt-10 border-t">
           <h2 className="font-display text-2xl font-bold tracking-tight">
             También te puede gustar
           </h2>
