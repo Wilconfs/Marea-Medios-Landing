@@ -3,12 +3,11 @@ import { HeroBanner } from '@/components/hero-banner'
 import { CategoryRow } from '@/components/category-row'
 import { FlashSaleSection } from '@/components/flash-sale-section'
 import { ProductCard } from '@/components/product-card'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, ShieldCheck, RefreshCw, MessageCircle } from 'lucide-react'
 import { notFound } from 'next/navigation'
 import { WhatsappButton } from '@/components/whatsapp-button'
-import { ShieldCheck, RefreshCw, MessageCircle } from 'lucide-react'
 
-// Esto asegura que Next.js no guarde en caché la página y siempre consulte la BD
+// Asegura que Next.js consulte siempre la base de datos en producción sin guardar caché obsoleto
 export const dynamic = 'force-dynamic'
 
 interface PageProps {
@@ -17,20 +16,19 @@ interface PageProps {
 }
 
 export default async function HomePage(props: PageProps) {
-  // 1. Esperamos los parámetros (Obligatorio en Next.js 15)
+  // 1. Esperamos los parámetros (Requisito obligatorio de Next.js 15)
   const params = await props.params;
   const searchParams = await props.searchParams;
 
   /**
-   * 2. IDENTIFICACIÓN DEL TENANT
-   * Aquí buscamos en la tabla 'Tenant' (o 'User' según tu schema)
-   * que el campo 'slug' o 'domain' coincida con lo que viene en la URL.
+   * 2. IDENTIFICACIÓN MULTI-TENANT
+   * Buscamos que la tienda corresponda con el slug del subdominio de la URL
    */
   const tenant = await prisma.tenant.findUnique({
-    where: { slug: params.domain } // Asegúrate de que en tu BD 'tienda1.local' esté en la columna slug
+    where: { slug: params.domain }
   })
 
-  // Si el dominio no existe en la BD de XAMPP, mostramos 404
+  // Si no existe la tienda en producción, mandamos un 404 limpio
   if (!tenant) {
     console.log(`❌ Error: No existe un tenant registrado con el dominio: ${params.domain}`);
     notFound();
@@ -42,9 +40,8 @@ export default async function HomePage(props: PageProps) {
   const flashFilter = searchParams?.flashSale === 'true'
 
   /**
-   * 3. CONSTRUCCIÓN DEL FILTRO (Seguridad Multi-tenant)
-   * Es CRÍTICO que siempre incluyas 'tenantId' en el 'where' para que
-   * una tienda nunca vea los productos de otra.
+   * 3. CONSTRUCCIÓN DE FILTROS SEGUROS
+   * Siempre filtramos por tenantId para evitar cruce de datos entre tiendas virtuales
    */
   const where: any = { 
     isActive: true,
@@ -55,21 +52,25 @@ export default async function HomePage(props: PageProps) {
     where.category = { slug: categoryFilter }
   }
   
-  if (searchFilter) {
-    where.name = { contains: searchFilter, mode: 'insensitive' }
-  }
-  
   if (flashFilter) {
     where.isFlashSale = true
   }
 
-  // Lógica para no duplicar productos si estamos en la home principal
+  // Lógica para que el buscador de texto en MySQL filtre de forma reactiva
+  if (searchFilter) {
+    where.OR = [
+      { name: { contains: searchFilter } },
+      { description: { contains: searchFilter } }
+    ]
+  }
+
+  // Evitamos duplicar los productos si están viendo la página de inicio limpia
   const showFlashSection = !categoryFilter && !searchFilter && !flashFilter
   if (showFlashSection) {
     where.isFlashSale = false
   }
 
-  // 4. CONSULTAS EN PARALELO (Más rápido)
+  // 4. CONSULTAS SIMULTÁNEAS EN MYSQL (Optimiza el tiempo de carga en producción)
   const [categories, products, flashProducts] = await Promise.all([
     prisma.category.findMany({ 
       where: { tenantId: tenantId }, 
@@ -91,22 +92,16 @@ export default async function HomePage(props: PageProps) {
     }),
   ])
 
-  // >>> DEBUG: Revisa esto en la terminal de VS Code para confirmar la conexión <<<
-  console.log("=== SISTEMA SAAS ACTIVO ===");
-  console.log("Dominio en URL:", params.domain);
-  console.log("Tienda encontrada:", tenant.name);
-  console.log("Total Productos:", products.length);
-
   return (
-    <div className="min-h-screen bg-[#f9fafb]"> {/* Fondo gris muy suave para dar contraste */}
+    <div className="min-h-screen bg-[#f9fafb]">
       <div className="container-page space-y-16 py-10">
         
-        {/* 1. SECCIÓN HERO: Banner Principal */}
+        {/* Banner Principal */}
         <div className="w-full">
-      <HeroBanner />
-    </div>
+          <HeroBanner />
+        </div>
 
-        {/* 2. SECCIÓN CATEGORÍAS: Ahora con Título y Contexto */}
+        {/* Listado de Categorías */}
         <section className="space-y-6">
           <div className="flex flex-col items-center text-center space-y-2">
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
@@ -122,15 +117,15 @@ export default async function HomePage(props: PageProps) {
           </div>
         </section>
 
-        {/* 3. SECCIÓN DE OFERTAS: (Si existe) */}
+        {/* Sección de Ofertas Flash */}
         {showFlashSection && flashProducts.length > 0 && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-3xl border border-blue-100">
             <FlashSaleSection products={flashProducts as any} />
           </div>
         )}
 
-        {/* 4. SECCIÓN DE PRODUCTOS: Con jerarquía premium */}
-        <section id="productos" className="space-y-8">
+        {/* Cuadrícula de Productos Principal */}
+        <section id="productos" className="space-y-8 scroll-mt-20">
           <div className="flex items-center justify-between border-b border-slate-200 pb-6">
             <div className="flex items-center gap-3">
               <div className="bg-primary/10 p-2 rounded-xl">
@@ -142,7 +137,6 @@ export default async function HomePage(props: PageProps) {
               </div>
             </div>
             
-            {/* Badge de cantidad para llenar espacio visual */}
             <div className="hidden sm:block">
               <span className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-full text-sm font-semibold shadow-sm">
                 {products.length} Artículos disponibles
@@ -152,7 +146,7 @@ export default async function HomePage(props: PageProps) {
 
           {products.length === 0 ? (
             <div className="p-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-               <p className="text-slate-400 font-medium">No se encontraron productos en esta categoría.</p>
+               <p className="text-slate-400 font-medium">No se encontraron productos en este momento.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-5 xl:gap-8">
@@ -163,38 +157,34 @@ export default async function HomePage(props: PageProps) {
           )}
         </section>
 
-        {/* 5. SECCIÓN EXTRA: Banner de confianza (FOOTER VISUAL) */}
+        {/* Bloque de Beneficios / Footer de Confianza */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-slate-100">
+          <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
+            <div className="bg-blue-50 p-3 rounded-2xl mb-4">
+              <ShieldCheck className="h-8 w-8 text-blue-600" />
+            </div>
+            <h4 className="font-bold text-slate-800 text-lg">Envíos Rápidos</h4>
+            <p className="text-sm text-slate-500 mt-2">Recibe tus compras en tiempo récord.</p>
+          </div>
 
-{/* SECCIÓN DE BENEFICIOS AJUSTADA */}
-<section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-slate-100">
-  
-  {/* Envíos Rápidos */}
-  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-    <div className="bg-blue-50 p-3 rounded-2xl mb-4">
-      <ShieldCheck className="h-8 w-8 text-blue-600" />
-    </div>
-    <h4 className="font-bold text-slate-800 text-lg">Envíos Rápidos</h4>
-    <p className="text-sm text-slate-500 mt-2">Recibe tus compras en tiempo récord.</p>
-  </div>
+          <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
+            <div className="bg-purple-50 p-3 rounded-2xl mb-4">
+              <RefreshCw className="h-8 w-8 text-purple-600" />
+            </div>
+            <h4 className="font-bold text-slate-800 text-lg">Pago Seguro</h4>
+            <p className="text-sm text-slate-500 mt-2">Tus transacciones están protegidas.</p>
+          </div>
 
-  {/* Pago Seguro */}
-  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-    <div className="bg-purple-50 p-3 rounded-2xl mb-4">
-      <RefreshCw className="h-8 w-8 text-purple-600" />
-    </div>
-    <h4 className="font-bold text-slate-800 text-lg">Pago Seguro</h4>
-    <p className="text-sm text-slate-500 mt-2">Tus transacciones están protegidas.</p>
-  </div>
+          <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
+            <div className="bg-green-50 p-3 rounded-2xl mb-4">
+              <MessageCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h4 className="font-bold text-slate-800 text-lg">Calidad Garantizada</h4>
+            <p className="text-sm text-slate-500 mt-2">Productos seleccionados cuidadosamente.</p>
+          </div>
+        </section>
 
-  {/* Calidad Garantizada */}
-  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-    <div className="bg-green-50 p-3 rounded-2xl mb-4">
-      <MessageCircle className="h-8 w-8 text-green-600" />
-    </div>
-    <h4 className="font-bold text-slate-800 text-lg">Calidad Garantizada</h4>
-    <p className="text-sm text-slate-500 mt-2">Productos seleccionados cuidadosamente.</p>
-  </div>
-</section>
+        {/* Newsletter */}
         <section className="rounded-3xl bg-primary p-10 text-center text-white shadow-xl">
           <h3 className="text-2xl font-bold">¡Únete a nuestra comunidad!</h3>
           <p className="mt-2 text-blue-100">Recibe ofertas exclusivas y novedades antes que nadie.</p>
@@ -209,11 +199,11 @@ export default async function HomePage(props: PageProps) {
             </button>
           </div>
         </section>
-              </div>
-              <div className="container-page space-y-16 py-10">
-            {/* ... tus otras secciones ... */}
-            <WhatsappButton /> 
-          </div>
-            </div>
-          )
+        
+      </div>
+      
+      {/* Botón Flotante Corporativo */}
+      <WhatsappButton />
+    </div>
+  )
 }
