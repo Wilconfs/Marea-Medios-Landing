@@ -13,12 +13,15 @@ export async function GET() {
 
   const settings = await prisma.setting.findMany()
   const map: Record<string, string> = {}
-  for (const s of settings) map[s.key] = s.value
+  for (const s of settings) {
+    if (s.key) map[s.key] = s.value
+  }
   return NextResponse.json(map)
 }
 
 const updateSchema = z.object({
   settings: z.record(z.string(), z.string()),
+  tenantId: z.string().optional(), // Lo hacemos opcional para evitar que rompa si no viene
 })
 
 export async function PATCH(req: Request) {
@@ -29,17 +32,39 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json()
-    const { settings } = updateSchema.parse(body)
+    const { settings, tenantId } = updateSchema.parse(body)
 
-    const ops = Object.entries(settings).map(([key, value]) =>
-      prisma.setting.upsert({
-        where: { key },
-        update: { value },
-        create: { key, value },
-      }),
-    )
+    // Si no manejas múltiples tenants en esta sección, puedes usar un string por defecto o el id que venga
+    const activeTenantId = tenantId || "global"
+
+    const ops = Object.entries(settings).map(async ([key, value]) => {
+      // 1. Buscamos de forma plana sin exigir índices @unique fijos
+      const existing = await prisma.setting.findFirst({
+        where: {
+          key: key,
+          tenantId: activeTenantId
+        }
+      })
+
+      if (existing) {
+        // 2. Si existe, actualizamos usando su ID único principal
+        return prisma.setting.update({
+          where: { id: existing.id },
+          data: { value: String(value) }
+        })
+      } else {
+        // 3. Si no existe, creamos el registro
+        return prisma.setting.create({
+          data: {
+            key: key,
+            value: String(value),
+            tenantId: activeTenantId
+          }
+        })
+      }
+    })
+
     await Promise.all(ops)
-
     return NextResponse.json({ ok: true })
   } catch (err) {
     if (err instanceof z.ZodError) {

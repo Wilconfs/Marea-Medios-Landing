@@ -88,7 +88,7 @@ export function SiteHeader() {
         </form>
 
         <div className="flex flex-1 items-center justify-end gap-1.5 md:flex-none">
-          <ThemeToggle />
+          {/*<ThemeToggle /> Modo Oscuro de la Ecommerce */} 
 
           {/* Cart */}
           <Link href="/cart" aria-label="Carrito">

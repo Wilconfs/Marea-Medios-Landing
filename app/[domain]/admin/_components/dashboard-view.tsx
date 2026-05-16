@@ -82,7 +82,7 @@ export function DashboardView() {
           value={formatNumber(stats.totalCustomers)}
           icon={Users}
           iconBg="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-          delta="7%"
+          //delta="7%"
           trend="up"
         />
         <KpiCard
@@ -90,7 +90,7 @@ export function DashboardView() {
           value={formatPrice(stats.totalSales)}
           icon={DollarSign}
           iconBg="bg-green-500/10 text-green-600 dark:text-green-400"
-          delta="7%"
+          //delta="7%"
           trend="up"
         />
         <KpiCard
@@ -98,7 +98,7 @@ export function DashboardView() {
           value={formatNumber(stats.totalOrders)}
           icon={ShoppingCart}
           iconBg="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-          delta="3.5%"
+          //delta="3.5%"
           trend="down"
         />
         <KpiCard

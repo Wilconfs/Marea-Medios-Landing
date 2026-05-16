@@ -129,7 +129,7 @@ model Order {
 
 model Setting {
   id        String   @id @default(cuid())
-  key       String   @unique
+  key       String   // <-- LE QUITAMOS EL @unique AQUÍ
   value     String
   
   // Las configuraciones también deben ser por cliente
@@ -139,5 +139,7 @@ model Setting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // CREAMOS ESTE ÍNDICE COMPUESTO ÚNICO (Clave + Tenant)
+  @@unique([tenantId, key])
   @@index([tenantId])
 }
