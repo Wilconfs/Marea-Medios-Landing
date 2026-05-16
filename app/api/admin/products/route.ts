@@ -7,24 +7,20 @@ export const dynamic = 'force-dynamic'
 
 /**
  * 1. Función para detectar la tienda (Tenant)
- * Corregida para Next.js 15 y para identificar dominios como 'tienda1.local'
  */
 async function getTenantContext() {
-  const headerList = await headers() // En Next 15 headers es asíncrono
+  const headerList = await headers()
   const host = headerList.get('host') || ''
-  
-  // Extraemos el dominio eliminando el puerto (ej: "tienda1.local:3000" -> "tienda1.local")
   const domain = host.split(':')[0]
   
   if (!domain) return null
 
-  // Buscamos el Tenant cuyo slug coincida exactamente con el dominio de la URL
   return await prisma.tenant.findUnique({
     where: { slug: domain }
   })
 }
 
-// 2. LISTAR productos (Filtrados por tienda)
+// 2. LISTAR productos
 export async function GET() {
   try {
     const auth = await requireRole(['SUPERADMIN', 'ADMIN', 'AUXILIAR'])
@@ -38,12 +34,8 @@ export async function GET() {
     }
 
     const products = await prisma.product.findMany({
-      where: {
-        tenantId: tenant.id // FILTRO CRÍTICO: Solo productos de esta tienda
-      },
-      include: {
-        category: true 
-      },
+      where: { tenantId: tenant.id },
+      include: { category: true },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -54,7 +46,7 @@ export async function GET() {
   }
 }
 
-// 3. CREAR producto (Vinculado automáticamente a la tienda)
+// 3. CREAR producto (Corregido para soportar los dos precios)
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
@@ -73,13 +65,15 @@ export async function POST(req: NextRequest) {
       name, 
       description, 
       price, 
+      originalPrice, // <-- CAPTURAMOS EL PRECIO ORIGINAL DE ANTES
       imageUrl, 
       categoryId, 
       isActive,
-      stock 
+      stock,
+      isFlashSale
     } = body
 
-    if (!name || !price || !categoryId) {
+    if (!name || price === undefined || price === null || !categoryId) {
       return NextResponse.json({ error: 'Campos obligatorios faltantes' }, { status: 400 })
     }
 
@@ -87,12 +81,14 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         description,
-        price: parseFloat(price.toString()),
+        price: parseFloat(price.toString()), // Precio final de venta (Rebajado o normal)
+        originalPrice: originalPrice ? parseFloat(originalPrice.toString()) : null, // Precio viejo base
         imageUrl: imageUrl, 
         categoryId,
         isActive: isActive ?? true,
-        stock: parseInt(stock?.toString()) || 0,
-        tenantId: tenant.id // ASIGNACIÓN OBLIGATORIA DEL TENANT DETECTADO
+        isFlashSale: isFlashSale ?? false,
+        stock: parseInt(stock?.toString() || '0') || 0,
+        tenantId: tenant.id
       }
     })
 

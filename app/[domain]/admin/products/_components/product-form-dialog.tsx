@@ -28,8 +28,8 @@ export type ProductFormData = {
   id?: string
   name: string
   description: string
-  price: string
-  originalPrice: string
+  price: string        
+  originalPrice: string 
   discount: string
   stock: string
   imageUrl: string
@@ -44,7 +44,7 @@ const EMPTY: ProductFormData = {
   price: '',
   originalPrice: '',
   discount: '',
-  stock: '', // Vacío para evitar el "0126"
+  stock: '',
   imageUrl: '',
   categoryId: '',
   isActive: true,
@@ -69,14 +69,39 @@ export function ProductFormDialog({
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Función auxiliar para transformar un número o string numérico a formato con puntos
+  const formatWithDots = (value: string | number): string => {
+    if (value === null || value === undefined) return ''
+    const cleanValue = value.toString().replace(/\D/g, '')
+    if (!cleanValue) return ''
+    return new Intl.NumberFormat('es-CO').format(parseInt(cleanValue, 10))
+  }
+
+  // Función para limpiar los puntos antes de enviar al backend
+  const cleanDots = (value: string): string => {
+    return value.replace(/\./g, '')
+  }
+
   useEffect(() => {
     if (open) {
       if (initial) {
+        /* NUEVA LÓGICA DE CARGA DIRECTA:
+          - Si 'originalPrice' existe en la BD, significa que el producto TIENE una oferta activa.
+            Por lo tanto: El precio base es 'originalPrice' y el de oferta es 'price'.
+          - Si 'originalPrice' NO existe (es nulo o 0), el producto NO tiene oferta.
+            Por lo tanto: El precio base real está guardado en 'price' y el input de oferta debe quedar vacío.
+        */
+        const hasOriginalPrice = initial.originalPrice && Number(initial.originalPrice) > 0
+
         setData({
           ...initial,
           stock: initial.stock?.toString() || '',
-          price: initial.price?.toString() || '',
-          originalPrice: initial.originalPrice?.toString() || '',
+          originalPrice: hasOriginalPrice 
+            ? formatWithDots(initial.originalPrice) 
+            : (initial.price ? formatWithDots(initial.price) : ''),
+          price: hasOriginalPrice 
+            ? (initial.price ? formatWithDots(initial.price) : '') 
+            : '',
         })
       } else {
         setData(EMPTY)
@@ -86,6 +111,11 @@ export function ProductFormDialog({
 
   const update = <K extends keyof ProductFormData>(k: K, v: ProductFormData[K]) => 
     setData((d) => ({ ...d, [k]: v }))
+
+  const handlePriceChange = (key: 'originalPrice' | 'price', value: string) => {
+    const formatted = formatWithDots(value)
+    update(key, formatted)
+  }
 
   const isEdit = !!initial?.id
 
@@ -113,15 +143,42 @@ export function ProductFormDialog({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+
+    if (!data.categoryId) {
+      toast.error('Por favor, selecciona una categoría')
+      return
+    }
+
+    if (!data.imageUrl.trim()) {
+      toast.error('Debes subir al menos una imagen para el producto')
+      return
+    }
+
     setSubmitting(true)
     try {
+      const rawOriginalPrice = cleanDots(data.originalPrice)
+      const rawSalePrice = cleanDots(data.price)
+
+      const hasSalePrice = rawSalePrice.trim() !== ''
+      
+      /*
+        NUEVA LÓGICA DE ENVÍO SEGURO:
+        - Si el usuario llenó ambos campos (Regular y Oferta):
+          'price' de la BD será el valor de Oferta (el más barato)
+          'originalPrice' de la BD será el valor Regular (el precio de antes)
+        - Si solo llenó el precio Regular:
+          'price' de la BD toma el valor Regular
+          'originalPrice' se va como null
+      */
       const payload = {
         ...data,
-        price: Number(data.price),
-        originalPrice: data.originalPrice ? Number(data.originalPrice) : null,
+        name: data.name.trim(),
+        description: data.description.trim(),
+        price: hasSalePrice ? Number(rawSalePrice) : Number(rawOriginalPrice),
+        originalPrice: hasSalePrice ? Number(rawOriginalPrice) : null,
         discount: data.discount ? Number(data.discount) : null,
         stock: data.stock === '' ? 0 : Number(data.stock),
-        imageUrl: data.imageUrl.trim() // Importante para la BD
+        imageUrl: data.imageUrl.trim()
       }
 
       const url = isEdit ? `/api/admin/products/${initial!.id}` : '/api/admin/products'
@@ -131,13 +188,16 @@ export function ProductFormDialog({
         body: JSON.stringify(payload),
       })
 
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Error del servidor')
+      }
 
-      toast.success('Guardado')
+      toast.success('Guardado con éxito')
       onSaved()
       onOpenChange(false)
-    } catch {
-      toast.error('Error al guardar')
+    } catch (error: any) {
+      toast.error(error.message || 'Error al guardar el producto')
     } finally {
       setSubmitting(false)
     }
@@ -168,9 +228,13 @@ export function ProductFormDialog({
             <div>
               <Label>Categoría *</Label>
               <Select value={data.categoryId} onValueChange={(v) => update('categoryId', v)}>
-                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
                 <SelectContent>
-                  {categories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))} 
                 </SelectContent>
               </Select>
             </div>
@@ -181,25 +245,38 @@ export function ProductFormDialog({
             </div>
 
             <div>
-              <Label>Precio Original (Antes)</Label>
-              <Input type="number" placeholder="Ej: 50000" value={data.originalPrice} onChange={(e) => update('originalPrice', e.target.value)} />
+              <Label>Precio Regular (Base) *</Label>
+              <Input 
+                type="text" 
+                placeholder="Ej: 50.000" 
+                value={data.originalPrice} 
+                onChange={(e) => handlePriceChange('originalPrice', e.target.value)} 
+                required 
+              />
             </div>
 
             <div>
-              <Label>Precio Rebajado (Venta) *</Label>
-              <Input type="number" placeholder="Ej: 35000" value={data.price} onChange={(e) => update('price', e.target.value)} required />
+              <Label>Precio Rebajado (Oferta)</Label>
+              <Input 
+                type="text" 
+                placeholder="Ej: 35.000" 
+                value={data.price} 
+                onChange={(e) => handlePriceChange('price', e.target.value)} 
+              />
             </div>
 
             <div className="sm:col-span-2">
-              <Label>Galería de Imágenes</Label>
+              <Label>Galería de Imágenes *</Label>
               <div className="mt-2 flex flex-wrap gap-2">
                 {currentImages.map((url, i) => (
                   <div key={i} className="relative h-20 w-20 rounded-md border overflow-hidden">
-                    <img src={url} className="h-full w-full object-cover" />
+                    <img src={url} className="h-full w-full object-cover" alt="Preview" />
                     <button type="button" onClick={() => {
                       const filtered = currentImages.filter(u => u !== url)
                       update('imageUrl', filtered.join(','))
-                    }} className="absolute right-1 top-1 bg-destructive text-white rounded-full p-0.5"><X size={12}/></button>
+                    }} className="absolute right-1 top-1 bg-destructive text-white rounded-full p-0.5">
+                      <X size={12}/>
+                    </button>
                   </div>
                 ))}
                 <div onClick={() => fileInputRef.current?.click()} className="flex h-20 w-20 cursor-pointer items-center justify-center rounded-md border-2 border-dashed hover:bg-muted">
@@ -218,14 +295,13 @@ export function ProductFormDialog({
               </div>
               <Switch checked={data.isActive} onCheckedChange={(v) => update('isActive', v)} />
             </div>
-            {/* <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
+            <div className="flex items-center justify-between rounded-lg border p-4 shadow-sm">
               <div className="space-y-0.5">
                 <Label className="text-base font-medium">Flash Sale</Label>
                 <p className="text-sm text-muted-foreground">Destacar en oferta flash</p>
               </div>
               <Switch checked={data.isFlashSale} onCheckedChange={(v) => update('isFlashSale', v)} />
             </div> 
-            */}
           </div>
 
           <DialogFooter>

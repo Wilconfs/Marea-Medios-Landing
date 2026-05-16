@@ -1,17 +1,43 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth-helpers'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * Detecta dinámicamente el Tenant real inspeccionando la URL (host)
+ */
+async function getTenantContext() {
+  const headerList = await headers() // Next.js 15
+  const host = headerList.get('host') || ''
+  const domain = host.split(':')[0] // Remueve el puerto (:3000)
+  
+  if (!domain) return null
+
+  return await prisma.tenant.findUnique({
+    where: { slug: domain }
+  })
+}
+
+// 1. OBTENER CONFIGURACIONES DE LA TIENDA ACTUAL
 export async function GET() {
-  const auth = await requireRole(['SUPERADMIN'])
+  const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
   if (auth.error) {
-    return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
+    return NextResponse.json({ error: auth.error }, { status: 403 })
   }
 
-  const settings = await prisma.setting.findMany()
+  const tenant = await getTenantContext()
+  if (!tenant) {
+    return NextResponse.json({ error: 'Tienda no identificada' }, { status: 404 })
+  }
+
+  // Buscamos SOLO las configuraciones que correspondan al ID único de esta tienda
+  const settings = await prisma.setting.findMany({
+    where: { tenantId: tenant.id }
+  })
+
   const map: Record<string, string> = {}
   for (const s of settings) {
     if (s.key) map[s.key] = s.value
@@ -20,45 +46,47 @@ export async function GET() {
 }
 
 const updateSchema = z.object({
-  settings: z.record(z.string(), z.string()),
-  tenantId: z.string().optional(), // Lo hacemos opcional para evitar que rompa si no viene
+  settings: z.record(z.string(), z.any()),
 })
 
+// 2. GUARDAR CONFIGURACIONES EXCLUSIVAS DE ESTA TIENDA
 export async function PATCH(req: Request) {
-  const auth = await requireRole(['SUPERADMIN'])
+  const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
   if (auth.error) {
-    return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
+    return NextResponse.json({ error: auth.error }, { status: 403 })
+  }
+
+  const tenant = await getTenantContext()
+  if (!tenant) {
+    return NextResponse.json({ error: 'Tienda no identificada' }, { status: 400 })
   }
 
   try {
     const body = await req.json()
-    const { settings, tenantId } = updateSchema.parse(body)
-
-    // Si no manejas múltiples tenants en esta sección, puedes usar un string por defecto o el id que venga
-    const activeTenantId = tenantId || "global"
+    const { settings } = updateSchema.parse(body)
 
     const ops = Object.entries(settings).map(async ([key, value]) => {
-      // 1. Buscamos de forma plana sin exigir índices @unique fijos
+      const stringValue = value !== null && value !== undefined ? String(value) : ''
+
+      // Buscamos si ya existe esta llave para ESTA tienda específica
       const existing = await prisma.setting.findFirst({
         where: {
           key: key,
-          tenantId: activeTenantId
+          tenantId: tenant.id // Uso estricto del ID único del cliente
         }
       })
 
       if (existing) {
-        // 2. Si existe, actualizamos usando su ID único principal
         return prisma.setting.update({
           where: { id: existing.id },
-          data: { value: String(value) }
+          data: { value: stringValue }
         })
       } else {
-        // 3. Si no existe, creamos el registro
         return prisma.setting.create({
           data: {
             key: key,
-            value: String(value),
-            tenantId: activeTenantId
+            value: stringValue,
+            tenantId: tenant.id // Se vincula de forma segura a su dueño
           }
         })
       }
@@ -70,7 +98,7 @@ export async function PATCH(req: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
     }
-    console.error('[admin/settings PATCH]', err)
+    console.error('[admin/settings PATCH Error]:', err)
     return NextResponse.json({ error: 'server_error' }, { status: 500 })
   }
 }

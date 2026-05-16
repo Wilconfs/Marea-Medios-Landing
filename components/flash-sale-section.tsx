@@ -56,16 +56,17 @@ export function FlashSaleSection({ products }: { products: Product[] }) {
             <Zap className="h-5 w-5" />
           </span>
           <h2 className="font-display text-2xl font-bold tracking-tight">
-            Flash Sale
+            Productos en Oferta
           </h2>
         </div>
+        {/*
         <div className="flex items-center gap-1.5" suppressHydrationWarning>
           <TimeBox value={mounted ? pad(time.h) : '08'} />
           <span className="font-mono font-bold text-discount">:</span>
           <TimeBox value={mounted ? pad(time.m) : '17'} />
           <span className="font-mono font-bold text-discount">:</span>
           <TimeBox value={mounted ? pad(time.s) : '08'} />
-        </div>
+        </div>*/}
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
