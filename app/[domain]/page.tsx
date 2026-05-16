@@ -55,8 +55,11 @@ export default async function HomePage(props: PageProps) {
     where.category = { slug: categoryFilter }
   }
   
-  if (searchFilter) {
-    where.name = { contains: searchFilter, mode: 'insensitive' }
+if (searchFilter) {
+    where.OR = [
+      { name: { contains: searchFilter } },
+      { description: { contains: searchFilter } }
+    ]
   }
   
   if (flashFilter) {
