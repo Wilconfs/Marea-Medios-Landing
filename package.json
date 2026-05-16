@@ -34,6 +34,9 @@
     "tsx": "4.20.3",
     "typescript": "5.2.2"
   },
+  "config": {
+  "legacy-peer-deps": true
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.0.0",
