@@ -61,7 +61,7 @@ async function main() {
   // ---- Settings ----
   const settings = [
     { key: 'whatsappNumber', value: '573001234567' },
-    { key: 'storeName', value: 'EcomDash' },
+    { key: 'storeName', value: 'Tienda Marea' },
     { key: 'paymentMethod', value: 'whatsapp' },
     { key: 'currency', value: 'COP' },
   ]

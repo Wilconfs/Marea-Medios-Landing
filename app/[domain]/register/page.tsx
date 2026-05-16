@@ -17,7 +17,7 @@ export default function RegisterPage() {
             Crear cuenta
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Únete a EcomDash en segundos
+            Únete a Tienda Marea en segundos
           </p>
         </div>
 

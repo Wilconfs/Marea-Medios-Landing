@@ -68,7 +68,7 @@ export function SiteHeader() {
             <Sparkles className="h-5 w-5" />
           </span>
           <span className="hidden sm:inline">
-            Ecom<span className="text-primary">Dash</span>
+            Tienda<span className="text-primary">Marea</span>
           </span>
         </Link>
 

@@ -63,7 +63,7 @@ export function SiteFooter() {
           </div>
         </div>
         <div className="mt-10 border-t border-border/60 pt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} EcomDash. Todos los derechos reservados.
+          © {new Date().getFullYear()} Tienda Marea. Todos los derechos reservados.
         </div>
       </div>
     </footer>

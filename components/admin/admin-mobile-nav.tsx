@@ -41,7 +41,7 @@ export function AdminMobileNav({ role }: { role: UserRole }) {
           />
           <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-card">
             <div className="flex h-16 items-center justify-between border-b px-5">
-              <span className="font-display text-lg font-bold">EcomDash</span>
+              <span className="font-display text-lg font-bold">Tienda Marea</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}

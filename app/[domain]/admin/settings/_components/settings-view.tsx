@@ -16,7 +16,7 @@ type Settings = {
 }
 
 const DEFAULTS: Settings = {
-  storeName: 'EcomDash',
+  storeName: 'Tienda Marea',
   whatsappNumber: '573001234567',
   paymentMethod: 'whatsapp',
   currency: 'COP',

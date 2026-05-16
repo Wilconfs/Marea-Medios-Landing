@@ -29,7 +29,7 @@ export const WhatsappButton = () => {
                 <MessageCircle className="h-6 w-6 fill-current" />
               </div>
               <div>
-                <p className="font-bold text-sm">Soporte EcomDash</p>
+                <p className="font-bold text-sm">Soporte Tienda Marea</p>
                 <p className="text-[10px] opacity-90">En línea ahora</p>
               </div>
             </div>

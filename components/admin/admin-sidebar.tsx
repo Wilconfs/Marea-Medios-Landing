@@ -59,7 +59,7 @@ export function AdminSidebar({
         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
           <LayoutDashboard className="h-5 w-5" />
         </span>
-        <span className="font-display text-lg font-bold">EcomDash</span>
+        <span className="font-display text-lg font-bold">Tienda Marea</span>
       </div>
 
       {/* User info */}

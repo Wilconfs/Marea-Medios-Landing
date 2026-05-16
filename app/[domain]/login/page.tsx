@@ -17,7 +17,7 @@ export default function LoginPage() {
             Bienvenido de vuelta
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ingresa a tu cuenta de EcomDash
+            Ingresa a tu cuenta de Tienda Marea
           </p>
         </div>
 

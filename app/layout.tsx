@@ -14,14 +14,14 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
-  title: 'EcomDash - Tu tienda de moda online',
+  title: 'Tienda Marea - Tu tienda de moda online',
   description: 'Descubre las mejores ofertas en moda. Camisetas, chaquetas, jeans, bolsos y zapatos con envío rápido.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
   },
   openGraph: {
-    title: 'EcomDash - Tu tienda de moda online',
+    title: 'Tienda Marea - Tu tienda de moda online',
     description: '¡Hasta 50% OFF! Descubre las mejores ofertas en moda y accesorios.',
     images: ['/og-image.png'],
     type: 'website',
@@ -43,7 +43,7 @@ export default function RootLayout({
         <script src="https://apps.abacus.ai/chatllm/appllm-lib.js" async></script>
       </head>
       <body
-        className={`${dmSans.variable} ${jakartaSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${dmSans.variable} ${jakartaSans.variable} ${jetbrainsMono.variable} font-sans antialiased min-h-screen overflow-x-hidden antialiased`}
       >
         <ThemeProvider
           attribute="class"

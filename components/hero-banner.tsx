@@ -46,7 +46,13 @@ export function HeroBanner() {
   const prevSlide = () => setCurrent((prev) => (prev === 0 ? SLIDES.length - 1 : prev - 1))
 
   return (
-    <section className="group relative h-[450px] w-full overflow-hidden rounded-xl shadow-xl lg:h-[520px]">
+    /* CAMBIOS REALIZADOS EN LA SECCIÓN:
+       1. Reemplazamos w-full por w-[100vw] para forzar el ancho total de la ventana.
+       2. Añadimos relative left-[50%] right-[50%] -translate-x-[50%] para centrar el bloque completo respecto al monitor, evadiendo cualquier contenedor limitador superior.
+       3. Quitamos rounded-xl y shadow-xl para que los bordes del gradiente toquen perfectamente los extremos.
+       4. Incrementamos las alturas h-[520px] y lg:h-[640px] para darle mayor presencia vertical (alto y bajo).
+    */
+    <section className="group relative h-[520px] w-[100vw] relative left-[50%] right-[50%] -translate-x-[50%] overflow-hidden bg-gray-950 lg:h-[640px]">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -54,12 +60,17 @@ export function HeroBanner() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
-          className={`relative h-full w-full bg-gradient-to-br ${SLIDES[current].color} p-6 sm:p-10 md:p-16`}
+          className={`absolute inset-0 flex h-full w-full bg-gradient-to-r ${SLIDES[current].color} px-6 py-12 md:px-12`}
         >
+          
           {/* Fondo Decorativo */}
           <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
           
-          <div className="relative z-10 grid h-full items-center gap-8 md:grid-cols-2">
+          {/* ZONA SEGURA INTERNA:
+              Envolvemos la estructura de contenido en un contenedor 'max-w-7xl mx-auto'
+              para asegurar que tus textos y la imagen mantengan la alineación perfecta con el resto de la web.
+          */}
+          <div className="mx-auto grid h-full w-full max-w-7xl items-center gap-8 md:grid-cols-2 relative z-10">
             {/* TEXTO */}
             <motion.div
               initial={{ x: -30, opacity: 0 }}
@@ -94,7 +105,8 @@ export function HeroBanner() {
               transition={{ delay: 0.4 }}
               className="relative hidden h-full w-full md:block"
             >
-              <div className="relative h-full w-full overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
+              {/* Le damos un alto controlado del 85% para mantener el estilizado ideal con las nuevas dimensiones de la sección */}
+              <div className="relative h-[85%] w-full overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
                 <Image
                   src={SLIDES[current].image}
                   alt={SLIDES[current].title}

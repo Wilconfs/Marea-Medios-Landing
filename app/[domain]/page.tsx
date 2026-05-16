@@ -102,9 +102,9 @@ export default async function HomePage(props: PageProps) {
       <div className="container-page space-y-16 py-10">
         
         {/* 1. SECCIÓN HERO: Banner Principal */}
-        <section className="rounded-3xl overflow-hidden shadow-xl shadow-blue-900/5">
-          <HeroBanner />
-        </section>
+        <div className="w-full">
+      <HeroBanner />
+    </div>
 
         {/* 2. SECCIÓN CATEGORÍAS: Ahora con Título y Contexto */}
         <section className="space-y-6">

@@ -10,7 +10,7 @@ export function buildWhatsAppMessage(
   const lines: string[] = []
   
   // Mantenemos tus emojis originales que se ven excelentes
-  lines.push('✨ *Nuevo Pedido - EcomDash*')
+  lines.push('✨ *Nuevo Pedido - Tienda Marea*')
   lines.push('')
   if (customerName) {
     lines.push(`👤 *Cliente:* ${customerName}`)
