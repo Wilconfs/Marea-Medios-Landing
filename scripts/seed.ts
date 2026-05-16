@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-
+const DEFAULT_TENANT_ID = 'cmouehzwk0000eo81fuyf0s37'
 
 async function main() {
 
@@ -66,12 +66,20 @@ async function main() {
     { key: 'currency', value: 'COP' },
   ]
   for (const s of settings) {
-    await prisma.setting.upsert({
-      where: { key: s.key },
-      update: { value: s.value },
-      create: s,
-    })
-  }
+  await prisma.setting.upsert({
+    where: {
+      tenantId_key: {
+        tenantId: DEFAULT_TENANT_ID,
+        key: s.key,
+      },
+    },
+    update: { value: s.value },
+    create: {
+      ...s,
+      tenantId: DEFAULT_TENANT_ID, // Le pasamos el ID obligatorio para el registro nuevo
+    },
+  })
+}
 
   // ---- Categories ----
   const categoryData = [
