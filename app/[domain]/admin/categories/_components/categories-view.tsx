@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Plus, Pencil, Trash2, Loader2, Tags } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -25,13 +25,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { formatNumber } from '@/lib/format'
 
 type Category = {
@@ -41,17 +34,6 @@ type Category = {
   icon: string
   _count?: { products: number }
 }
-
-const ICON_OPTIONS = [
-  { value: 'shirt', label: 'Camisa' },
-  { value: 'jacket', label: 'Chaqueta' },
-  { value: 'pants', label: 'Pantalón' },
-  { value: 'bag', label: 'Bolso' },
-  { value: 'shoe', label: 'Zapato' },
-  { value: 'watch', label: 'Reloj' },
-  { value: 'cap', label: 'Gorra' },
-  { value: 'package', label: 'Paquete' },
-]
 
 function slugify(s: string) {
   return s
@@ -71,7 +53,6 @@ export function CategoriesView() {
   const [editing, setEditing] = useState<Category | null>(null)
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
-  const [icon, setIcon] = useState('package')
   const [submitting, setSubmitting] = useState(false)
   const [deleting, setDeleting] = useState<Category | null>(null)
 
@@ -96,7 +77,6 @@ export function CategoriesView() {
     setEditing(null)
     setName('')
     setSlug('')
-    setIcon('package')
     setOpen(true)
   }
 
@@ -104,7 +84,6 @@ export function CategoriesView() {
     setEditing(c)
     setName(c.name)
     setSlug(c.slug)
-    setIcon(c.icon)
     setOpen(true)
   }
 
@@ -122,7 +101,8 @@ export function CategoriesView() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), icon }),
+        // Mantenemos tu name, tu slug original y fijamos el icon como 'package'
+        body: JSON.stringify({ name: name.trim(), slug: slug.trim(), icon: 'package' }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -186,7 +166,7 @@ export function CategoriesView() {
         </div>
       ) : categories.length === 0 ? (
         <div className="rounded-lg bg-card p-12 text-center" style={{ boxShadow: 'var(--shadow-sm)' }}>
-          <Tags className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+          <Package className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Aún no hay categorías.</p>
         </div>
       ) : (
@@ -199,7 +179,8 @@ export function CategoriesView() {
             >
               <div className="mb-3 flex items-start justify-between">
                 <div className="flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Tags className="h-5 w-5" />
+                  {/* Renderiza el ícono de paquete por defecto en las tarjetas */}
+                  <Package className="h-5 w-5" />
                 </div>
                 {!isReadOnly && (
                   <div className="flex gap-1">
@@ -262,21 +243,7 @@ export function CategoriesView() {
                 Sólo letras minúsculas, números y guiones
               </p>
             </div>
-            <div>
-              <Label htmlFor="cat-icon">Ícono</Label>
-              <Select value={icon} onValueChange={setIcon}>
-                <SelectTrigger id="cat-icon">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ICON_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* El campo de selección de ícono ha sido completamente eliminado de aquí */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>

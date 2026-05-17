@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Loader2, Search, Shield, ShieldCheck, User as UserIcon, Plus, HardHat } from 'lucide-react'
+import { Loader2, Search, Shield, ShieldCheck, User as UserIcon, Plus, HardHat, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 import { useSession } from 'next-auth/react'
 import { Input } from '@/components/ui/input'
@@ -54,14 +54,24 @@ export function UsersView() {
   const currentUserId = session?.user?.id
   const currentUserRole = session?.user?.role as Role | undefined
   const isSuperAdmin = currentUserRole === 'SUPERADMIN'
+  
+  // Seguridad: Solo SUPERADMIN y ADMIN pueden gestionar y realizar ediciones
+  const canManage = currentUserRole === 'SUPERADMIN' || currentUserRole === 'ADMIN'
 
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+  
+  // Estados para creación
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'CLIENTE' as Role })
+
+  // Estados para edición
+  const [editOpen, setEditOpen] = useState(false)
+  const [updatingUser, setUpdatingUser] = useState(false)
+  const [editData, setEditData] = useState({ id: '', name: '', email: '', role: 'CLIENTE' as Role })
 
   async function load() {
     setLoading(true)
@@ -115,22 +125,62 @@ export function UsersView() {
     }
   }
 
-  // Roles disponibles según el usuario actual
   function getAvailableRoles(): Role[] {
-    // Si soy SUPERADMIN, puedo asignar cualquier rol
     if (isSuperAdmin) return ['SUPERADMIN', 'ADMIN', 'AUXILIAR', 'CLIENTE']
-    
-    // Si soy ADMIN, NO puedo asignar SUPERADMIN (solo de Admin para abajo)
     return ['ADMIN', 'AUXILIAR', 'CLIENTE']
   }
 
   function getAssignableRoles(targetUser: User): Role[] {
     const roles = getAvailableRoles()
-    // Si el usuario objetivo es SUPERADMIN y yo no lo soy, 
-    // solo devuelvo su rol actual para que el select quede bloqueado o sin opciones extra.
     if (targetUser.role === 'SUPERADMIN' && !isSuperAdmin) return ['SUPERADMIN']
-    
     return roles
+  }
+
+  // Manejador para abrir el modal de edición cargando los datos del usuario seleccionado
+  function handleOpenEdit(user: User) {
+    setEditData({ id: user.id, name: user.name, email: user.email, role: user.role })
+    setEditOpen(true)
+  }
+
+  // Envío del formulario de edición de datos completos
+  async function handleUpdateUser(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editData.name.trim() || !editData.email.trim()) {
+      toast.error('Nombre y email son obligatorios')
+      return
+    }
+    setUpdatingUser(true)
+    try {
+      // Apuntamos a la API general /api/admin/users que sí funciona sin problemas de carpetas
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({ 
+          id: editData.id, // Pasamos el ID dentro del body del JSON
+          name: editData.name.trim(), 
+          email: editData.email.trim().toLowerCase(), 
+          role: editData.role 
+        }),
+      })
+
+      const responseData = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        toast.error(responseData.message || responseData.error || 'No se pudo actualizar el usuario')
+        return
+      }
+
+      toast.success('Usuario actualizado con éxito')
+      setEditOpen(false)
+      load()
+    } catch (error) {
+      console.error(error)
+      toast.error('Error de red al intentar actualizar')
+    } finally {
+      setUpdatingUser(false)
+    }
   }
 
   async function handleCreateUser(e: React.FormEvent) {
@@ -181,7 +231,7 @@ export function UsersView() {
             Administra los roles y permisos de los usuarios
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
+        <Button onClick={() => setCreateOpen(true)} disabled={!canManage}>
           <Plus className="mr-2 h-4 w-4" />
           Crear usuario
         </Button>
@@ -225,6 +275,7 @@ export function UsersView() {
                   <th className="px-4 py-3 text-left">Registro</th>
                   <th className="px-4 py-3 text-left">Rol actual</th>
                   <th className="px-4 py-3 text-right">Cambiar rol</th>
+                  <th className="px-4 py-3 text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -239,7 +290,8 @@ export function UsersView() {
                     .slice(0, 2)
                     .toUpperCase()
                   const assignable = getAssignableRoles(u)
-                  const canChange = !isSelf && assignable.length > 1
+                  const canChange = canManage && !isSelf && assignable.length > 1
+                  
                   return (
                     <tr key={u.id} className="border-b last:border-0 hover:bg-secondary/30">
                       <td className="px-4 py-3">
@@ -294,6 +346,16 @@ export function UsersView() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleOpenEdit(u)}
+                          disabled={!canManage || (u.role === 'SUPERADMIN' && !isSuperAdmin)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                       </td>
                     </tr>
                   )
@@ -372,6 +434,67 @@ export function UsersView() {
               <Button type="submit" disabled={creating}>
                 {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Crear usuario
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit user dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar usuario</DialogTitle>
+            <DialogDescription>
+              Modifica los datos principales o actualiza los permisos de este colaborador.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div>
+              <Label htmlFor="edit-name">Nombre *</Label>
+              <Input
+                id="edit-name"
+                value={editData.name}
+                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-email">Email *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editData.email}
+                onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-role">Rol *</Label>
+              <Select
+                value={editData.role}
+                onValueChange={(v) => setEditData({ ...editData, role: v as Role })}
+                disabled={editData.id === currentUserId}
+              >
+                <SelectTrigger id="edit-role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableRoles().map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABEL[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={updatingUser}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={updatingUser}>
+                {updatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Guardar cambios
               </Button>
             </DialogFooter>
           </form>

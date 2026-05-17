@@ -158,8 +158,8 @@ if (searchFilter) {
                <p className="text-slate-400 font-medium">No se encontraron productos en esta categoría.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 lg:grid-cols-5 xl:gap-8">
-              {products.map((p, i) => (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-8">
+                {products.map((p, i) => (
                 <ProductCard key={p.id} product={p as any} index={i} />
               ))}
             </div>

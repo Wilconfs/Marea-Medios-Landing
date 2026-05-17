@@ -80,3 +80,68 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'server_error' }, { status: 500 })
   }
 }
+
+export async function PUT(req: Request) {
+  const auth = await requireRole(['SUPERADMIN', 'ADMIN'])
+  if (auth.error) {
+    return NextResponse.json({ error: auth.error }, { status: auth.error === 'unauthorized' ? 401 : 403 })
+  }
+
+  try {
+    const body = await req.json()
+    const { id: targetId, name, email, role: nextRole } = body
+
+    if (!targetId || !name?.trim() || !email?.trim() || !nextRole) {
+      return NextResponse.json({ error: 'invalid_input', message: 'Faltan campos obligatorios' }, { status: 400 })
+    }
+
+    const currentUser = auth.session.user
+
+    // 1. Buscar usuario actual
+    const targetUser = await prisma.user.findUnique({ where: { id: targetId } })
+    if (!targetUser) {
+      return NextResponse.json({ error: 'not_found', message: 'Usuario no encontrado' }, { status: 404 })
+    }
+
+    // 2. Regla de oro: Un ADMIN no modifica a un SUPERADMIN
+    if (targetUser.role === 'SUPERADMIN' && currentUser.role !== 'SUPERADMIN') {
+      return NextResponse.json({ error: 'forbidden', message: 'No puedes modificar a un Super Admin' }, { status: 403 })
+    }
+
+    // 3. Regla de oro: Solo SUPERADMIN crea o promueve a SUPERADMIN
+    if (nextRole === 'SUPERADMIN' && targetUser.role !== 'SUPERADMIN' && currentUser.role !== 'SUPERADMIN') {
+      return NextResponse.json({ error: 'forbidden', message: 'Solo un Super Admin puede asignar el rol Super Admin' }, { status: 403 })
+    }
+
+    // 4. Evitar quitarse permisos administrativos a uno mismo
+    if (currentUser.id === targetId && nextRole !== targetUser.role) {
+      return NextResponse.json({ error: 'cannot_modify_self', message: 'No puedes cambiar tu propio rol' }, { status: 400 })
+    }
+
+    // 5. Verificar email duplicado
+    const existingEmail = await prisma.user.findFirst({
+      where: {
+        email: email.trim().toLowerCase(),
+        NOT: { id: targetId },
+      },
+    })
+    if (existingEmail) {
+      return NextResponse.json({ error: 'email_taken', message: 'El correo ya está registrado por otro usuario' }, { status: 409 })
+    }
+
+    // 6. Actualizar en la Base de Datos
+    const updated = await prisma.user.update({
+      where: { id: targetId },
+      data: {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role: nextRole,
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (err) {
+    console.error('[admin/users PUT]', err)
+    return NextResponse.json({ error: 'server_error' }, { status: 500 })
+  }
+}

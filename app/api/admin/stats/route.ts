@@ -36,11 +36,10 @@ export async function GET() {
 
     const tenantId = tenant.id
 
-    // 2. Total clientes de esta tienda (Asegúrate de que tus usuarios tengan tenantId si son por tienda)
+    // 2. Total clientes de esta tienda
     const totalCustomers = await prisma.user.count({ 
       where: { 
         role: 'CLIENTE',
-        // tenantId: tenantId // Descomenta esta línea si los clientes pertenecen a un tenant
       } 
     })
 
@@ -104,6 +103,55 @@ export async function GET() {
       } 
     })
 
+    // 🔽 ESTRATEGIA NUEVA INDEPENDIENTE DE COMPILACIÓN (MÁXIMA COMPATIBILIDAD) 🔽
+
+    // 8. Agrupación segura de ventas por Categoría usando únicamente el modelo Product
+    const productsWithCategory = await prisma.product.findMany({
+      where: { tenantId: tenantId },
+      select: {
+        price: true,
+        soldCount: true,
+        category: {
+          select: { name: true }
+        }
+      }
+    })
+
+    const categoryMap: Record<string, number> = {}
+    for (const prod of productsWithCategory) {
+      if (prod.category && prod.soldCount > 0) {
+        const totalProductSales = prod.soldCount * prod.price
+        categoryMap[prod.category.name] = (categoryMap[prod.category.name] || 0) + totalProductSales
+      }
+    }
+    const salesByCategory = Object.entries(categoryMap).map(([name, value]) => ({ name, value }))
+
+    // 9. Conteo de órdenes por su Estado operativo basándonos en el array de órdenes cargado previamente
+    const statusMap: Record<string, number> = {}
+    for (const o of orders) {
+      statusMap[o.status] = (statusMap[o.status] || 0) + 1
+    }
+    const ordersByStatus = Object.entries(statusMap).map(([status, count]) => ({
+      status,
+      count
+    }))
+
+    // 10. Alertas críticas de stock para productos de la tienda (unidades <= 5)
+    const lowStockAlerts = await prisma.product.findMany({
+      where: {
+        tenantId: tenantId,
+        isActive: true,
+        stock: { lte: 5 }
+      },
+      select: {
+        id: true,
+        name: true,
+        stock: true
+      },
+      orderBy: { stock: 'asc' },
+      take: 5
+    })
+
     return NextResponse.json({
       totalCustomers,
       totalOrders,
@@ -112,6 +160,10 @@ export async function GET() {
       monthly,
       topProducts,
       recentOrders,
+      // Retorno de los nuevos datos limpios para el frontend
+      salesByCategory,
+      ordersByStatus,
+      lowStockAlerts
     })
   } catch (error) {
     console.error('[ADMIN_STATS_GET]', error)
