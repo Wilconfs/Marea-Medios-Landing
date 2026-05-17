@@ -24,7 +24,7 @@ const SLIDES = [
     tag: '#NuevaColeccion',
     title: 'Estilo que te Define',
     subtitle: 'Temporada 2024',
-    description: 'Descubre las tendencias que están marcando el paso este año.',
+    description: 'Descubre las tendencias que están marking el paso este año.',
     image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop',
     color: 'from-purple-600 via-indigo-700 to-indigo-900',
     link: '#productos'
@@ -48,11 +48,10 @@ export function HeroBanner() {
   return (
     /* CAMBIOS REALIZADOS EN LA SECCIÓN:
        1. Reemplazamos w-full por w-[100vw] para forzar el ancho total de la ventana.
-       2. Añadimos relative left-[50%] right-[50%] -translate-x-[50%] para centrar el bloque completo respecto al monitor, evadiendo cualquier contenedor limitador superior.
-       3. Quitamos rounded-xl y shadow-xl para que los bordes del gradiente toquen perfectamente los extremos.
-       4. Incrementamos las alturas h-[520px] y lg:h-[640px] para darle mayor presencia vertical (alto y bajo).
+       2. Añadimos relative left-[50%] right-[50%] -translate-x-[50%] para centrar el bloque completo.
+       3. Cambiamos bg-gray-950 por bg-card para unificar con el header.
     */
-    <section className="group relative h-[520px] w-[100vw] relative left-[50%] right-[50%] -translate-x-[50%] overflow-hidden bg-gray-950 lg:h-[640px]">
+    <section className="group relative h-[520px] w-[100vw] relative left-[50%] right-[50%] -translate-x-[50%] overflow-hidden bg-card lg:h-[640px] select-none">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -60,16 +59,23 @@ export function HeroBanner() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4 }}
-          className={`absolute inset-0 flex h-full w-full bg-gradient-to-r ${SLIDES[current].color} px-6 py-12 md:px-12`}
+          // 👇 HABILITAMOS EL DRAG DE FRAMER MOTION PARA RATÓN Y PANTALLAS TÁCTILES
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.6}
+          onDragEnd={(e, info) => {
+            if (info.offset.x < -100) {
+              nextSlide()
+            } else if (info.offset.x > 100) {
+              prevSlide()
+            }
+          }}
+          className={`absolute inset-0 flex h-full w-full bg-gradient-to-r ${SLIDES[current].color} px-6 py-12 md:px-12 cursor-grab active:cursor-grabbing`}
         >
           
           {/* Fondo Decorativo */}
           <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
           
-          {/* ZONA SEGURA INTERNA:
-              Envolvemos la estructura de contenido en un contenedor 'max-w-7xl mx-auto'
-              para asegurar que tus textos y la imagen mantengan la alineación perfecta con el resto de la web.
-          */}
           <div className="mx-auto grid h-full w-full max-w-7xl items-center gap-8 md:grid-cols-2 relative z-10">
             {/* TEXTO */}
             <motion.div
@@ -86,7 +92,7 @@ export function HeroBanner() {
                   {SLIDES[current].subtitle}
                 </span>
               </h1>
-              <p className="mt-4 max-w-md text-base text-white/90 sm:text-lg">
+              <p className="mt-4 max-w-md text-base text-white/90 sm:text-lg pointer-events-none">
                 {SLIDES[current].description}
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
@@ -103,15 +109,14 @@ export function HeroBanner() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="relative hidden h-full w-full md:block"
+              className="relative hidden h-full w-full md:block pointer-events-none select-none"
             >
-              {/* Le damos un alto controlado del 85% para mantener el estilizado ideal con las nuevas dimensiones de la sección */}
               <div className="relative h-[85%] w-full overflow-hidden rounded-2xl border border-white/20 shadow-2xl">
                 <Image
                   src={SLIDES[current].image}
                   alt={SLIDES[current].title}
                   fill
-                  className="object-cover"
+                  className="object-cover pointer-events-none select-none"
                   priority
                 />
               </div>
@@ -120,22 +125,22 @@ export function HeroBanner() {
         </motion.div>
       </AnimatePresence>
 
-      {/* Controles de Navegación (aparecen al hacer hover) */}
+      {/* Controles de Navegación (Fijos y visibles para Móvil y PC) */}
       <button 
         onClick={prevSlide}
-        className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/20 p-2 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-black/40 group-hover:opacity-100"
+        className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/20 p-2 text-white backdrop-blur-md transition-all hover:bg-black/40 z-30 flex items-center justify-center opacity-100"
       >
         <ChevronLeft className="h-6 w-6" />
       </button>
       <button 
         onClick={nextSlide}
-        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/20 p-2 text-white opacity-0 backdrop-blur-md transition-opacity hover:bg-black/40 group-hover:opacity-100"
+        className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/20 p-2 text-white backdrop-blur-md transition-all hover:bg-black/40 z-30 flex items-center justify-center opacity-100"
       >
         <ChevronRight className="h-6 w-6" />
       </button>
 
       {/* Indicadores (Puntos abajo) */}
-      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2 z-30">
         {SLIDES.map((_, i) => (
           <button
             key={i}

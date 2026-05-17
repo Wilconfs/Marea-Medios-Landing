@@ -102,7 +102,7 @@ if (searchFilter) {
 
   return (
     <div className="min-h-screen bg-[#f9fafb]"> {/* Fondo gris muy suave para dar contraste */}
-      <div className="container-page space-y-16 py-10">
+      <div className="container-page">
         
         {/* 1. SECCIÓN HERO: Banner Principal */}
         <div className="w-full">
@@ -110,7 +110,7 @@ if (searchFilter) {
     </div>
 
         {/* 2. SECCIÓN CATEGORÍAS: Ahora con Título y Contexto */}
-        <section className="space-y-6">
+        <section className="space-y-6 pt-12 md:pt-10">
           <div className="flex flex-col items-center text-center space-y-2">
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
               Explora por Categorías
