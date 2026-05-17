@@ -164,15 +164,15 @@ export function ProductsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-row items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Productos</h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground hidden sm:block">
             {isReadOnly ? 'Vista de solo lectura' : 'Gestiona el inventario de tus productos.'}
           </p>
         </div>
         {!isReadOnly && (
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }} className="rounded-xl">
+          <Button onClick={() => { setEditing(null); setDialogOpen(true); }} className="rounded-xl shrink-0">
             <Plus className="mr-2 h-4 w-4" /> Nuevo Producto
           </Button>
         )}
@@ -188,92 +188,192 @@ export function ProductsView() {
         />
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-muted/50 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
-            <tr>
-              <th className="px-4 py-3">Producto</th>
-              <th className="px-4 py-3">Categoría</th>
-              <th className="px-4 py-3 text-right">Precio</th>
-              <th className="px-4 py-3 text-center">Stock</th>
-              <th className="px-4 py-3 text-center">Estado</th>
-              {!isReadOnly && <th className="px-4 py-3 text-right">Acciones</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {paginatedProducts.map((product) => (
-              <tr key={product.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3.5">
-                  <div className="flex items-center gap-3">
-                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white">
-                      <Image
-                        src={product.imageUrl?.split(',')[0] || '/placeholder.png'}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        sizes="40px"
-                      />
-                    </div>
-                    <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[220px]">
-                      {product.name}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400">
-                  {product.category?.name || 'Sin categoría'}
-                </td>
-                <td className="px-4 py-3.5 text-right font-mono font-medium text-slate-800 dark:text-white">
-                  {formatPrice(product.price)}
-                </td>
-                <td className="px-4 py-3.5 text-center">
+      {/* CONTENEDOR DE LA VISTA DE PRODUCTOS ADAPTATIVA */}
+      <div className="rounded-xl bg-transparent md:bg-card md:border md:shadow-sm overflow-hidden">
+        
+        {/* 1. VISTA MÓVIL: Se activa en pantallas chicas (Tarjetas verticales) */}
+        <div className="grid grid-cols-1 gap-4 md:hidden">
+          {paginatedProducts.map((product) => (
+            <div key={product.id} className="rounded-xl border bg-card p-4 shadow-sm space-y-4">
+              {/* Bloque Superior: Imagen, Nombre y Categoría */}
+              <div className="flex items-center gap-3">
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white">
+                  <Image
+                    src={product.imageUrl?.split(',')[0] || '/placeholder.png'}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                    {product.name}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    {product.category?.name || 'Sin categoría'}
+                  </p>
+                </div>
+              </div>
+
+              <hr className="border-slate-100 dark:border-slate-800" />
+
+              {/* Bloque Central: Precio, Stock y Control de Estado */}
+              <div className="flex justify-between items-center text-sm">
+                <div>
+                  <span className="text-xs text-muted-foreground block">Precio</span>
+                  <span className="font-mono font-bold text-slate-800 dark:text-white">
+                    {formatPrice(product.price)}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span className="text-xs text-muted-foreground block">Stock</span>
                   <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-bold ${
                     product.stock <= 5 
                       ? 'bg-red-500/10 text-red-600' 
                       : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
                   }`}>
-                    {product.stock}
+                    {product.stock} u.
                   </span>
-                </td>
-                <td className="px-4 py-3.5 text-center">
+                </div>
+                <div className="text-center flex flex-col items-center">
+                  <span className="text-xs text-muted-foreground block mb-1">Estado</span>
                   <Switch
                     disabled={isReadOnly || togglingId === product.id}
                     checked={product.isActive}
                     onCheckedChange={() => toggleActive(product)}
                   />
-                </td>
-                {!isReadOnly && (
-                  <td className="px-4 py-3.5 text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => {
-                        setEditing({
-                          ...product,
-                          price: product.price.toString(),
-                          originalPrice: product.originalPrice?.toString() || '',
-                          discount: product.discount?.toString() || '',
-                          stock: product.stock.toString(),
-                        });
-                        setDialogOpen(true);
-                      }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => setDeletingId(product.id)} className="text-red-500 rounded-xl hover:bg-red-500/10 hover:text-red-600">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                </div>
+              </div>
+
+              {/* Bloque Inferior: Botones de Gestión (Ocultos en solo lectura) */}
+              {!isReadOnly && (
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="rounded-xl flex-1 gap-2 text-xs" 
+                    onClick={() => {
+                      setEditing({
+                        ...product,
+                        price: product.price.toString(),
+                        originalPrice: product.originalPrice?.toString() || '',
+                        discount: product.discount?.toString() || '',
+                        stock: product.stock.toString(),
+                      });
+                      setDialogOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setDeletingId(product.id)} 
+                    className="text-red-500 rounded-xl hover:bg-red-500/10 hover:text-red-600 px-3"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {paginatedProducts.length === 0 && (
+            <div className="py-12 text-center text-sm text-slate-500 bg-card border rounded-xl shadow-sm">
+              No se encontraron productos que coincidan con la búsqueda.
+            </div>
+          )}
+        </div>
+
+        {/* 2. VISTA ESCRITORIO: Tabla original (Se esconde en móviles con hidden md:block) */}
+        <div className="hidden md:block">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b bg-muted/50 text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
+              <tr>
+                <th className="px-4 py-3">Producto</th>
+                <th className="px-4 py-3">Categoría</th>
+                <th className="px-4 py-3 text-right">Precio</th>
+                <th className="px-4 py-3 text-center">Stock</th>
+                <th className="px-4 py-3 text-center">Estado</th>
+                {!isReadOnly && <th className="px-4 py-3 text-right">Acciones</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {paginatedProducts.map((product) => (
+                <tr key={product.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white">
+                        <Image
+                          src={product.imageUrl?.split(',')[0] || '/placeholder.png'}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      </div>
+                      <span className="font-medium text-slate-800 dark:text-slate-200 truncate max-w-[220px]">
+                        {product.name}
+                      </span>
                     </div>
                   </td>
-                )}
-              </tr>
-            ))}
-            
-            {paginatedProducts.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-12 text-center text-sm text-slate-500">
-                  No se encontraron productos que coincidan con la búsqueda.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                  <td className="px-4 py-3.5 text-slate-600 dark:text-slate-400">
+                    {product.category?.name || 'Sin categoría'}
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono font-medium text-slate-800 dark:text-white">
+                    {formatPrice(product.price)}
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded-lg text-xs font-bold ${
+                      product.stock <= 5 
+                        ? 'bg-red-500/10 text-red-600' 
+                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    }`}>
+                      {product.stock}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-center">
+                    <Switch
+                      disabled={isReadOnly || togglingId === product.id}
+                      checked={product.isActive}
+                      onCheckedChange={() => toggleActive(product)}
+                    />
+                  </td>
+                  {!isReadOnly && (
+                    <td className="px-4 py-3.5 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => {
+                          setEditing({
+                            ...product,
+                            price: product.price.toString(),
+                            originalPrice: product.originalPrice?.toString() || '',
+                            discount: product.discount?.toString() || '',
+                            stock: product.stock.toString(),
+                          });
+                          setDialogOpen(true);
+                        }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeletingId(product.id)} className="text-red-500 rounded-xl hover:bg-red-500/10 hover:text-red-600">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+              
+              {paginatedProducts.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-sm text-slate-500">
+                    No se encontraron productos que coincidan con la búsqueda.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* FOOTER DEL PAGINADOR INTERACTIVO */}

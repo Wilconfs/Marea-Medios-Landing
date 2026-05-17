@@ -43,6 +43,27 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // 1. Si la url viene vacía o es solo una raíz, usar el origen dinámico
+      if (!url || url === '/' || url === baseUrl) {
+        return url;
+      }
+
+      // 2. FORZAR PERMISO ABSOLUTO EN DESARROLLO LOCAL:
+      // Si la URL contiene tu puerto local o dominio personalizado de pruebas,
+      // la retornamos directamente saltándonos la restricción de NEXTAUTH_URL
+      if (url.includes('.local:3000') || url.includes('localhost:3000')) {
+        return url;
+      }
+
+      // 3. Si es una ruta interna relativa (ej: /login o /admin)
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+
+      return baseUrl;
+    },
+
     async jwt({ token, user }) {
       if (user) {
         token.id = (user as any).id
@@ -60,5 +81,5 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
-  secret: process.env.NEXTAUTH_SECRET, // Coma añadida aquí
+  secret: process.env.NEXTAUTH_SECRET,
 }

@@ -198,20 +198,23 @@ if (searchFilter) {
     <p className="text-sm text-slate-500 mt-2">Productos seleccionados cuidadosamente.</p>
   </div>
 </section>
-        <section className="rounded-3xl bg-primary p-10 text-center text-white shadow-xl">
-          <h3 className="text-2xl font-bold">¡Únete a nuestra comunidad!</h3>
-          <p className="mt-2 text-blue-100">Recibe ofertas exclusivas y novedades antes que nadie.</p>
-          <div className="mx-auto mt-6 flex max-w-md gap-2">
-            <input 
-              type="email" 
-              placeholder="Tu correo electrónico" 
-              className="flex-1 rounded-xl border-none px-4 py-3 text-slate-900 focus:ring-2 focus:ring-accent"
-            />
-            <button className="rounded-xl bg-slate-900 px-6 py-3 font-bold transition-colors hover:bg-slate-800">
-              Suscribirme
-            </button>
-          </div>
-        </section>
+       {/* 6. SECCIÓN COMUNIDAD / NEWSLETTER */}
+<section className="rounded-3xl bg-primary p-6 sm:p-10 text-center text-white shadow-xl">
+  <h3 className="text-2xl font-bold">¡Únete a nuestra comunidad!</h3>
+  <p className="mt-2 text-blue-100">Recibe ofertas exclusivas y novedades antes que nadie.</p>
+  
+  {/* Ajuste en el contenedor: flex-col para móviles, flex-row para pantallas sm en adelante */}
+  <div className="mx-auto mt-6 flex flex-col sm:flex-row max-w-md gap-3">
+    <input 
+      type="email" 
+      placeholder="Tu correo electrónico" 
+      className="w-full flex-1 rounded-xl border-none px-4 py-3 text-slate-900 focus:ring-2 focus:ring-accent"
+    />
+    <button className="w-full sm:w-auto rounded-xl bg-slate-900 px-6 py-3 font-bold transition-colors hover:bg-slate-800 whitespace-nowrap">
+      Suscribirme
+    </button>
+  </div>
+</section>
               </div>
               <div className="container-page space-y-16 py-10">
             {/* ... tus otras secciones ... */}

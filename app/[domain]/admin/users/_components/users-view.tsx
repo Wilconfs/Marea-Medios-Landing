@@ -274,7 +274,7 @@ export function UsersView() {
                   <th className="px-4 py-3 text-right">Pedidos</th>
                   <th className="px-4 py-3 text-left">Registro</th>
                   <th className="px-4 py-3 text-left">Rol actual</th>
-                  <th className="px-4 py-3 text-right">Cambiar rol</th>
+                  {/*<th className="px-4 py-3 text-right">Cambiar rol</th>*/}
                   <th className="px-4 py-3 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -318,6 +318,7 @@ export function UsersView() {
                           year: 'numeric',
                         })}
                       </td>
+                      
                       <td className="px-4 py-3">
                         <span
                           className={cn(
@@ -329,6 +330,7 @@ export function UsersView() {
                           {ROLE_LABEL[u.role]}
                         </span>
                       </td>
+                        {/*
                       <td className="px-4 py-3 text-right">
                         <Select
                           value={u.role}
@@ -347,6 +349,7 @@ export function UsersView() {
                           </SelectContent>
                         </Select>
                       </td>
+                      */}
                       <td className="px-4 py-3 text-center">
                         <Button
                           size="icon"
