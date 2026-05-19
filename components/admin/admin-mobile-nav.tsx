@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, LayoutDashboard, Package, Tags, ShoppingBag, Users, Settings, Store, LogOut } from 'lucide-react'
+import { Menu, X, LayoutDashboard, Package, Tags, ShoppingBag, MessageSquare, Users, Settings, Store, LogOut } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/auth-helpers'
@@ -14,6 +14,7 @@ const items = [
   { href: '/admin/categories', label: 'Categorías', icon: Tags },
   { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] as UserRole[] },
+  { href: '/admin/messages', label: 'Mensajes WA', icon: MessageSquare },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] as UserRole[] },
 ]
 

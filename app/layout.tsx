@@ -21,8 +21,8 @@ export const metadata = {
     shortcut: '/favicon.svg',
   },
   openGraph: {
-    title: 'Tienda Marea - Tu tienda de moda online',
-    description: '¡Hasta 50% OFF! Descubre las mejores ofertas en moda y accesorios.',
+    title: 'Tienda Marea - Tu tienda virtual',
+    description: '¡Los mejores productos con precios imperdibles.',
     images: ['/og-image.png'],
     type: 'website',
   },

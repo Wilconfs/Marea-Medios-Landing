@@ -21,7 +21,18 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Formulario base */}
         <LoginForm />
+
+        {/* 👇 LINK DE RECUPERACIÓN AÑADIDO AQUÍ EN MEDIO */}
+        <div className="mt-4 text-center">
+          <Link 
+            href="/forgot-password" 
+            className="text-xs font-medium text-muted-foreground hover:text-primary hover:underline transition-all"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
           ¿Aún no tienes cuenta?{' '}

@@ -7,6 +7,7 @@ import {
   Package,
   Tags,
   ShoppingBag,
+  MessageSquare,
   Users,
   Settings,
   Store,
@@ -29,6 +30,7 @@ const items: Item[] = [
   { href: '/admin/categories', label: 'Categorías', icon: Tags },
   { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] },
+  { href: '/admin/messages', label: 'Mensajes WA', icon: MessageSquare },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
 ]
 

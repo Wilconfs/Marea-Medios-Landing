@@ -30,6 +30,7 @@ type User = {
   id: string
   name: string
   email: string
+  phone?: string | null // ◄ AGREGAR ESTO
   role: Role
   createdAt: string
   _count: { orders: number }
@@ -66,12 +67,12 @@ export function UsersView() {
   // Estados para creación
   const [createOpen, setCreateOpen] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'CLIENTE' as Role })
+  const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', password: '', role: 'CLIENTE' as Role })
 
   // Estados para edición
   const [editOpen, setEditOpen] = useState(false)
   const [updatingUser, setUpdatingUser] = useState(false)
-  const [editData, setEditData] = useState({ id: '', name: '', email: '', role: 'CLIENTE' as Role })
+  const [editData, setEditData] = useState({ id: '', name: '', email: '', phone: '', password: '', role: 'CLIENTE' as Role })
 
   async function load() {
     setLoading(true)
@@ -138,7 +139,14 @@ export function UsersView() {
 
   // Manejador para abrir el modal de edición cargando los datos del usuario seleccionado
   function handleOpenEdit(user: User) {
-    setEditData({ id: user.id, name: user.name, email: user.email, role: user.role })
+    setEditData({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '', // ◄ AGREGAR ESTA LÍNEA
+      password: '',            // ◄ AGREGAR ESTA LÍNEA
+      role: user.role,
+    })
     setEditOpen(true)
   }
 
@@ -158,10 +166,12 @@ export function UsersView() {
           'Content-Type': 'application/json' 
         },
         body: JSON.stringify({ 
-          id: editData.id, // Pasamos el ID dentro del body del JSON
+          id: editData.id, 
           name: editData.name.trim(), 
           email: editData.email.trim().toLowerCase(), 
-          role: editData.role 
+          role: editData.role,
+          phone: editData.phone.trim(),
+          password: editData.password ? editData.password.trim() : undefined // ◄ ¡AGREGAR ESTA LÍNEA!
         }),
       })
 
@@ -213,7 +223,7 @@ export function UsersView() {
       }
       toast.success('Usuario creado exitosamente')
       setCreateOpen(false)
-      setNewUser({ name: '', email: '', password: '', role: 'CLIENTE' })
+      setNewUser({ name: '', email: '', phone: '', password: '', role: 'CLIENTE' })
       load()
     } catch {
       toast.error('Error de red')
@@ -453,54 +463,93 @@ export function UsersView() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdateUser} className="space-y-4">
-            <div>
-              <Label htmlFor="edit-name">Nombre *</Label>
-              <Input
-                id="edit-name"
-                value={editData.name}
-                onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-email">Email *</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editData.email}
-                onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-role">Rol *</Label>
-              <Select
-                value={editData.role}
-                onValueChange={(v) => setEditData({ ...editData, role: v as Role })}
-                disabled={editData.id === currentUserId}
-              >
-                <SelectTrigger id="edit-role">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableRoles().map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {ROLE_LABEL[r]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={updatingUser}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={updatingUser}>
-                {updatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Guardar cambios
-              </Button>
-            </DialogFooter>
-          </form>
+          <div>
+            <Label htmlFor="edit-name">Nombre *</Label>
+            <Input
+              id="edit-name"
+              value={editData.name}
+              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-email">Email *</Label>
+            <Input
+              id="edit-email"
+              type="email"
+              value={editData.email}
+              onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+              required
+            />
+          </div>
+
+          {/* 👇 NUEVO INPUT: TELÉFONO EN EDICIÓN */}
+          <div>
+            <Label htmlFor="edit-phone">Teléfono Celular *</Label>
+            <Input
+              id="edit-phone"
+              type="text"
+              placeholder="Ej: 3101234567"
+              value={editData.phone}
+              onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="edit-role">Rol *</Label>
+            <Select
+              value={editData.role}
+              onValueChange={(v) => setEditData({ ...editData, role: v as Role })}
+              disabled={editData.id === currentUserId}
+            >
+              <SelectTrigger id="edit-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {getAvailableRoles().map((r) => (
+                  <SelectItem key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 👇 NUEVO INPUT: CONTRASEÑA CON BLOQUEO PARA CLIENTES */}
+          <div>
+            <Label htmlFor="edit-password">
+              Nueva Contraseña {editData.role === 'CLIENTE' ? '(No editable)' : '(Opcional)'}
+            </Label>
+            <Input
+              id="edit-password"
+              type="password"
+              placeholder={
+                editData.role === 'CLIENTE'
+                  ? 'Las claves de clientes no se editan aquí'
+                  : 'Dejar en blanco para mantener la actual'
+              }
+              value={editData.password}
+              onChange={(e) => setEditData({ ...editData, password: e.target.value })}
+              disabled={editData.role === 'CLIENTE'} 
+            />
+            {editData.role !== 'CLIENTE' && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Mínimo 6 caracteres. Si escribes una clave, se actualizará en la base de datos.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={updatingUser}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={updatingUser}>
+              {updatingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar cambios
+            </Button>
+          </DialogFooter>
+        </form>
         </DialogContent>
       </Dialog>
     </div>

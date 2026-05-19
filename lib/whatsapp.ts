@@ -41,3 +41,20 @@ export function buildWhatsAppUrl(phone: string, message: string): string {
   // Usamos wa.me que es el punto de enlace más compatible a nivel global
   return `https://wa.me/${safePhone}?text=${encodeURIComponent(cleanMessage).replace(/%250A/g, '%0A')}`
 }
+
+export function generateWhatsappLink(phone: string, templateText: string, orderData: { clientName: string; orderId: string; total: string }) {
+  // Limpiar el teléfono para que solo tenga números y el código de país (ej: 57 para Colombia)
+  const cleanPhone = phone.replace(/\D/g, '')
+
+  // Reemplazar las variables dinámicas del texto
+  let formattedMessage = templateText
+    .replace(/{cliente}/g, orderData.clientName)
+    .replace(/{pedido}/g, orderData.orderId)
+    .replace(/{total}/g, orderData.total)
+
+  // Codificar el texto para que sea una URL válida
+  const encodedText = encodeURIComponent(formattedMessage)
+
+  // Retornar el enlace nativo de WhatsApp
+  return `https://wa.me/${cleanPhone}?text=${encodedText}`
+}

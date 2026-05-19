@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, Search, Eye } from 'lucide-react'
+import { Loader2, Search, Eye, MessageSquare } from 'lucide-react' // 👈 Añadido MessageSquare
 import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import {
@@ -74,6 +74,66 @@ export function OrdersView() {
   useEffect(() => {
     load()
   }, [])
+
+  // 👇 FUNCIÓN LÓGICA DE NOTIFICACIÓN DE WHATSAPP AÑADIDA
+  const handleWhatsappNotification = async (order: Order) => {
+    try {
+      const res = await fetch('/api/admin/templates')
+      if (!res.ok) throw new Error()
+      const templates = await res.json()
+
+      // Mapeamos el estado interno al tipo de la plantilla guardada
+      const stateMapping: Record<Order['status'], 'RECIBIDO' | 'PREPARACION' | 'ENVIADO' | 'ENTREGADO' | 'CANCELLED'> = {
+        PENDING: 'RECIBIDO',     // 👈 Cambiado de PREPARACION a RECIBIDO
+        CONFIRMED: 'PREPARACION',
+        SHIPPED: 'ENVIADO',
+        DELIVERED: 'ENTREGADO',
+        CANCELLED: 'CANCELLED'   // 👈 Cambiado de null a CANCELLED
+      }
+
+      const currentType = stateMapping[order.status]
+      if (!currentType) {
+        toast.error('No hay plantillas de notificación para pedidos cancelados.')
+        return
+      }
+
+      const templateConfigured = templates.find((t: any) => t.type === currentType)?.message
+
+      const defaultMessages = {
+        RECIBIDO: "Hola {cliente}, confirmamos que hemos recibido tu pedido #{pedido} de forma correcta. ¡Pronto iniciaremos con su preparación!",
+        PREPARACION: "Hola {cliente}, te informamos que tu pedido #{pedido} ya está en preparación. ¡Pronto te avisaremos cuando vaya en camino!",
+        ENVIADO: "¡Buenas noticias {cliente}! Tu pedido #{pedido} ya fue enviado. El total de tu compra es de {total}.",
+        ENTREGADO: "Hola {cliente}, confirmamos que tu pedido #{pedido} fue entregado con éxito. ¡Gracias por tu compra!",
+        CANCELLED: "Hola {cliente}, te informamos que tu pedido #{pedido} ha sido cancelado. Si tienes dudas, por favor comunícate con soporte."
+      }
+
+      const baseText = templateConfigured || defaultMessages[currentType]
+      const clientName = order.customerName || order.user?.name || 'Cliente'
+      const orderId = order.id.slice(-6).toUpperCase()
+      const formattedTotal = formatPrice(order.total)
+
+      const formattedMessage = baseText
+        .replace(/{cliente}/g, clientName)
+        .replace(/{pedido}/g, orderId)
+        .replace(/{total}/g, formattedTotal)
+
+      let phone = (order.customerPhone || '').replace(/\D/g, '')
+      
+      if (!phone) {
+        toast.error('Este pedido no cuenta con un número celular registrado.')
+        return
+      }
+
+      if (!phone.startsWith('57') && phone.length === 10) {
+        phone = '57' + phone
+      }
+
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(formattedMessage)}`
+      window.open(whatsappUrl, '_blank')
+    } catch {
+      toast.error('Hubo un error al conectar con las plantillas de WhatsApp.')
+    }
+  }
 
   const filtered = useMemo(() => {
     return orders.filter((o) => {
@@ -189,12 +249,25 @@ export function OrdersView() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/admin/orders/${o.id}`}>
-                            <Eye className="mr-1.5 h-3.5 w-3.5" />
-                            Ver
-                          </Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          {/* 👇 BOTÓN DE ACCIÓN RÁPIDA WHATSAPP AÑADIDO */}
+                            {/* Deja el renderizado libre para todos los estados */}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleWhatsappNotification(o)}
+                                className="bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 rounded-xl gap-1 border-green-200"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                Notificar
+                              </Button>
+                          <Button asChild size="sm" variant="outline" className="rounded-xl">
+                            <Link href={`/admin/orders/${o.id}`}>
+                              <Eye className="mr-1.5 h-3.5 w-3.5" />
+                              Ver
+                            </Link>
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Loader2, MessageCircle, User, Phone, Mail, Calendar, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Loader2, MessageCircle, User, Phone, Mail, Calendar, AlertTriangle, MessageSquare } from 'lucide-react' // 👈 Añadido MessageSquare
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -61,7 +61,6 @@ function getAllowedStatuses(current: OrderStatus): OrderStatus[] {
   if (current === 'DELIVERED' || current === 'CANCELLED') return [current]
   const idx = STATUS_ORDER.indexOf(current)
   if (idx === -1) return [current]
-  // Solo puede avanzar al siguiente estado o cancelar
   const allowed: OrderStatus[] = [current]
   if (idx < STATUS_ORDER.length - 1) {
     allowed.push(STATUS_ORDER[idx + 1])
@@ -102,6 +101,66 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId])
+
+  // 👇 FUNCIÓN LÓGICA DE NOTIFICACIÓN DESDE EL DETALLE
+  const handleWhatsappNotification = async () => {
+    if (!order) return
+    try {
+      const res = await fetch('/api/admin/templates')
+      if (!res.ok) throw new Error()
+      const templates = await res.json()
+
+      const stateMapping: Record<OrderStatus, 'RECIBIDO' | 'PREPARACION' | 'ENVIADO' | 'ENTREGADO' | 'CANCELLED'> = {
+        PENDING: 'RECIBIDO',
+        CONFIRMED: 'PREPARACION',
+        SHIPPED: 'ENVIADO',
+        DELIVERED: 'ENTREGADO',
+        CANCELLED: 'CANCELLED'
+      }
+
+      const currentType = stateMapping[order.status]
+      if (!currentType) {
+        toast.error('No hay plantillas de notificación para pedidos cancelados.')
+        return
+      }
+
+      const templateConfigured = templates.find((t: any) => t.type === currentType)?.message
+
+      const defaultMessages = {
+        RECIBIDO: "Hola {cliente}, confirmamos que hemos recibido tu pedido #{pedido} de forma correcta. ¡Pronto iniciaremos con su preparación!",
+        PREPARACION: "Hola {cliente}, te informamos que tu pedido #{pedido} ya está en preparación. ¡Pronto te avisaremos cuando vaya en camino!",
+        ENVIADO: "¡Buenas noticias {cliente}! Tu pedido #{pedido} ya fue enviado. El total de tu compra es de {total}.",
+        ENTREGADO: "Hola {cliente}, confirmamos que tu pedido #{pedido} fue entregado con éxito. ¡Gracias por tu compra!",
+        CANCELLED: "Hola {cliente}, te informamos que tu pedido #{pedido} ha sido cancelado. Si tienes dudas, por favor comunícate con soporte."
+      }
+
+      const baseText = templateConfigured || defaultMessages[currentType]
+      const clientName = order.customerName || order.user?.name || 'Cliente'
+      const orderIdShort = order.id.slice(-6).toUpperCase()
+      const formattedTotal = formatPrice(order.total)
+
+      const formattedMessage = baseText
+        .replace(/{cliente}/g, clientName)
+        .replace(/{pedido}/g, orderIdShort)
+        .replace(/{total}/g, formattedTotal)
+
+      let phone = (order.customerPhone || '').replace(/\D/g, '')
+      
+      if (!phone) {
+        toast.error('Este pedido no cuenta con un número celular registrado.')
+        return
+      }
+
+      if (!phone.startsWith('57') && phone.length === 10) {
+        phone = '57' + phone
+      }
+
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(formattedMessage)}`
+      window.open(whatsappUrl, '_blank')
+    } catch {
+      toast.error('Hubo un error al conectar con las plantillas de WhatsApp.')
+    }
+  }
 
   function requestStatusChange(status: OrderStatus) {
     if (!order || status === order.status) return
@@ -162,7 +221,7 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button asChild size="icon" variant="ghost">
+          <Button asChild size="icon" variant="ghost" className="rounded-xl">
             <Link href="/admin/orders">
               <ArrowLeft className="h-5 w-5" />
             </Link>
@@ -176,14 +235,24 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Estado:</span>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          {/* 👇 BOTÓN EN DETALLE DE PEDIDO AÑADIDO AL LADO DEL SELECTOR */}
+            <Button
+              onClick={handleWhatsappNotification}
+              variant="outline"
+              className="bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 rounded-xl gap-1.5 border-green-200"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Notificar Cliente
+            </Button>
+
+          <span className="text-sm text-muted-foreground ml-2">Estado:</span>
           <Select
             value={order.status}
             onValueChange={(v) => requestStatusChange(v as OrderStatus)}
-            disabled={updating || isTerminal}
+            disabled={updating || isTerminal || isReadOnly}
           >
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-44 rounded-xl">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -224,11 +293,10 @@ export function OrderDetailView({ orderId }: { orderId: string }) {
               >
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border bg-pink-50 flex items-center justify-center">
                     <Image
-                      // Tomamos la primera imagen si es una lista separada por comas
                       src={it.imageUrl?.split(',')[0] || '/placeholder.png'} 
                       alt={it.name}
                       fill
-                      className="object-contain p-1" // El padding evita que la imagen toque los bordes
+                      className="object-contain p-1"
                       sizes="64px"
                       priority
                     />

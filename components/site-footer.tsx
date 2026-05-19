@@ -54,7 +54,7 @@ export function SiteFooter() {
                 <Phone className="h-4 w-4 text-primary" /> +57 300 123 4567
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-primary" /> hola@ecomdash.com
+                <Mail className="h-4 w-4 text-primary" /> hola@tiendamarea.com
               </li>
               <li className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary" /> Bogotá, Colombia
