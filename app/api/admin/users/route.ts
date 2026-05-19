@@ -15,7 +15,6 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: 'desc' },
-    // 👇 Usamos un cast 'as any' aquí también para proteger el GET de la caché del editor
     select: {
       id: true,
       name: true,
@@ -30,13 +29,13 @@ export async function GET() {
   return NextResponse.json(users)
 }
 
-// Create internal user - SUPERADMIN y ADMIN
+// Validamos estrictamente que el teléfono sea obligatorio y tenga texto
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
   password: z.string().min(6),
   role: z.enum(['SUPERADMIN', 'ADMIN', 'AUXILIAR', 'CLIENTE']),
-  phone: z.string().optional().or(z.literal('')), 
+  phone: z.string().min(1, 'El teléfono celular es totalmente obligatorio'), 
 })
 
 export async function POST(req: Request) {
@@ -57,18 +56,14 @@ export async function POST(req: Request) {
     }
 
     const existingEmail = await prisma.user.findUnique({ where: { email: data.email } })
-    if (existingEmail) return NextResponse.json({ error: 'email_taken' }, { status: 409 })
+    if (existingEmail) return NextResponse.json({ error: 'email_taken', message: 'El correo ya está registrado' }, { status: 409 })
 
-    // ◄ SOLUCIÓN: Solo validar teléfono único si el usuario realmente escribió uno
-    const formattedPhone = data.phone?.trim() || null
-    if (formattedPhone) {
-      const existingPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } })
-      if (existingPhone) return NextResponse.json({ error: 'phone_taken', message: 'El teléfono ya está registrado' }, { status: 409 })
-    }
+    const formattedPhone = data.phone.trim()
+    const existingPhone = await prisma.user.findFirst({ where: { phone: formattedPhone } })
+    if (existingPhone) return NextResponse.json({ error: 'phone_taken', message: 'El teléfono ya está registrado' }, { status: 409 })
 
     const passwordHash = await bcrypt.hash(data.password, 10)
     
-    // Objeto limpio con bypass 'as any'
     const userPayload: any = {
       name: data.name,
       email: data.email,
@@ -85,14 +80,14 @@ export async function POST(req: Request) {
         email: true, 
         role: true, 
         createdAt: true,
-        phone: true // ◄ Al meter el 'as any' abajo, ya no te va a estallar aquí
+        phone: true
       } as any,
     })
 
     return NextResponse.json(user, { status: 201 })
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: 'invalid_input', details: err.errors }, { status: 400 })
+      return NextResponse.json({ error: 'invalid_input', message: err.errors[0].message }, { status: 400 })
     }
     console.error('[admin/users POST]', err)
     return NextResponse.json({ error: 'server_error' }, { status: 500 })
@@ -109,9 +104,8 @@ export async function PUT(req: Request) {
     const body = await req.json()
     const { id: targetId, name, email, role: nextRole, phone, password } = body
 
-    // ◄ SOLUCIÓN: Eliminamos la validación estricta de !phone?.trim() para que no rompa si viene vacío
-    if (!targetId || !name?.trim() || !email?.trim() || !nextRole) {
-      return NextResponse.json({ error: 'invalid_input', message: 'Faltan campos obligatorios' }, { status: 400 })
+    if (!targetId || !name?.trim() || !email?.trim() || !phone?.trim() || !nextRole) {
+      return NextResponse.json({ error: 'invalid_input', message: 'Faltan campos obligatorios, incluyendo el teléfono' }, { status: 400 })
     }
 
     const currentUser = auth.session.user
@@ -131,25 +125,23 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: 'cannot_modify_self', message: 'No puedes cambiar tu propio rol' }, { status: 400 })
     }
 
+    // ◄ SOLUCIÓN ACÁ: Cambiado a prisma.user.findFirst
     const existingEmail = await prisma.user.findFirst({
       where: { email: email.trim().toLowerCase(), NOT: { id: targetId } },
     })
     if (existingEmail) return NextResponse.json({ error: 'email_taken', message: 'El correo ya está en uso' }, { status: 409 })
 
-    // ◄ SOLUCIÓN: Solo validar teléfono duplicado en edición si se ingresó un valor
-    const formattedPhone = phone?.trim() || null
-    if (formattedPhone) {
-      const existingPhone = await prisma.user.findFirst({
-        where: { phone: formattedPhone, NOT: { id: targetId } },
-      })
-      if (existingPhone) return NextResponse.json({ error: 'phone_taken', message: 'El teléfono ya está registrado por otro usuario' }, { status: 409 })
-    }
+    const formattedPhone = phone.trim()
+    const existingPhone = await prisma.user.findFirst({
+      where: { phone: formattedPhone, NOT: { id: targetId } },
+    })
+    if (existingPhone) return NextResponse.json({ error: 'phone_taken', message: 'El teléfono ya está registrado por otro usuario' }, { status: 409 })
 
     const updateData: any = {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       role: nextRole,
-      phone: formattedPhone, // Guardará el número o null si se borró
+      phone: formattedPhone, 
     }
 
     if (password && password.trim().length >= 6) {
@@ -162,10 +154,9 @@ export async function PUT(req: Request) {
       updateData.passwordHash = await bcrypt.hash(password.trim(), 10)
     }
 
-    // 👇 SOLUCIÓN: Agregamos el 'as any' aquí para saltar el bloqueo del cliente de Prisma viejo
     const updated = await prisma.user.update({
       where: { id: targetId },
-      data: updateData as any,
+      data: updateData,
     })
 
     return NextResponse.json(updated)

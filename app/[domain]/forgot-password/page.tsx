@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/forgot-password', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'send-code', identifier }),
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/forgot-password', {
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'verify-code', identifier, code }),
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
     setMessage('')
 
     try {
-      const res = await fetch('/forgot-password', {
+      const res = await fetch('//api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reset-password', identifier, code, newPassword }),
