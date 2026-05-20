@@ -208,7 +208,13 @@ export function UsersView() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify({
+        name: newUser.name.trim(),
+        email: newUser.email.trim().toLowerCase(),
+        password: newUser.password,
+        role: newUser.role,
+        phone: String(newUser.phone || '').trim() // ◄ FORZAMOS que sea un string limpio
+      }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -407,6 +413,18 @@ export function UsersView() {
                 placeholder="correo@ejemplo.com"
                 value={newUser.email}
                 onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                required
+              />
+            </div>
+            {/* 👇 AGREGAR ESTA SECCIÓN PARA EL TELÉFONO CELULAR */}
+            <div>
+              <Label htmlFor="new-phone">Teléfono Celular *</Label>
+              <Input
+                id="new-phone"
+                type="tel"
+                placeholder="Ej: 3101234567"
+                value={newUser.phone || ''} // ◄ Evita que se vuelva undefined en los renders
+                onChange={(e) => setNewUser((prev) => ({ ...prev, phone: e.target.value }))} // ◄ Usamos una función funcional para asegurar el estado más fresco
                 required
               />
             </div>

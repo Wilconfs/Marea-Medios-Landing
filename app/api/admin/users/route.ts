@@ -23,7 +23,7 @@ export async function GET() {
       role: true,
       createdAt: true,
       _count: { select: { orders: true } },
-    } as any,
+    },
   })
 
   return NextResponse.json(users)
@@ -72,16 +72,63 @@ export async function POST(req: Request) {
       phone: formattedPhone,
     }
 
+    const adminUser = await prisma.user.findUnique({
+      where: { id: auth.session.user.id },
+      select: { tenantId: true }
+    })
+
+    let targetTenantId = adminUser?.tenantId
+
+    if (!targetTenantId) {
+      const fallbackTenant = await prisma.tenant.findFirst({ select: { id: true } })
+      targetTenantId = fallbackTenant?.id || null
+    }
+
+    if (!targetTenantId) {
+      return NextResponse.json(
+        { error: 'no_tenant', message: 'No existe ningún Tenant registrado en la base de datos.' },
+        { status: 400 }
+      )
+    }
+
+    let derivedTenantId: string | null = null
+    try {
+      const referer = req.headers.get('referer') || '' 
+      if (referer) {
+        const urlObj = new URL(referer)
+        const host = urlObj.host.split(':')[0] 
+        const slug = host.split('.')[0] // Obtiene "tienda1"
+        
+        const tenantRecord = await prisma.tenant.findFirst({
+          where: {
+            OR: [
+              { slug: slug },
+              { id: slug }
+            ]
+          }
+        })
+        if (tenantRecord) derivedTenantId = tenantRecord.id
+      }
+    } catch (errTenant) {
+      console.error('❌ Error derivando el tenant:', errTenant)
+    }
     const user = await prisma.user.create({
-      data: userPayload,
+      data: {
+        name: data.name,
+        email: data.email,
+        passwordHash,
+        role: data.role,
+        phone: formattedPhone,
+        tenantId: targetTenantId
+      },
       select: { 
         id: true, 
         name: true, 
         email: true, 
         role: true, 
         createdAt: true,
-        phone: true
-      } as any,
+        phone: true, // ◄ Corregido: Ahora usa true de forma nativa
+      },
     })
 
     return NextResponse.json(user, { status: 201 })

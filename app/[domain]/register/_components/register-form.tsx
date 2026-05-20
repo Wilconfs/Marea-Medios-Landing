@@ -16,6 +16,11 @@ export function RegisterForm() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [phone, setPhone] = useState('')
+  const hostname = typeof window !== 'undefined' ? window.location.host : ''
+  const cleanSlug = hostname.split(':')[0].split('.')[0]
+
+  console.log("✈️ Enviando registro para el Tenant Slug:", cleanSlug)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,12 +30,14 @@ export function RegisterForm() {
       const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, phone, password, tenantId: cleanSlug }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(data?.error ?? 'No se pudo crear la cuenta')
-        toast.error(data?.error ?? 'Error al registrar')
+        // CORRECCIÓN: Captura .message o .error para mostrar la razón exacta en pantalla
+        const errorMessage = data?.message || data?.error || 'No se pudo crear la cuenta'
+        setError(errorMessage)
+        toast.error(errorMessage)
         return
       }
       // Auto login
@@ -64,7 +71,7 @@ export function RegisterForm() {
             type="text"
             autoComplete="name"
             required
-            placeholder="María Pérez"
+            placeholder="Nombre"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="pl-10"
@@ -86,6 +93,18 @@ export function RegisterForm() {
             className="pl-10"
           />
         </div>
+      </div>
+      {/* ◄ 3. NUEVO CAMPO: TELÉFONO CELULAR */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono celular</label>
+        <input
+          type="tel"
+          placeholder="Número de celular"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          required // Hace que el navegador valide que no vaya vacío
+        />
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="password">Contraseña</Label>

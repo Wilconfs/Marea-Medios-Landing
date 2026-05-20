@@ -10,6 +10,7 @@ const updateSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
   role: z.enum(['SUPERADMIN', 'ADMIN', 'AUXILIAR', 'CLIENTE']),
+  phone: z.string().trim().min(1, 'El teléfono celular es requerido para la actualización'), // ◄ Agregar esta línea
 })
 
 export async function PATCH(
@@ -30,7 +31,7 @@ export async function PATCH(
 
   try {
     const body = await req.json()
-    const { name, email, role: nextRole } = updateSchema.parse(body)
+    const { name, email, role: nextRole, phone } = updateSchema.parse(body)
 
     // 2. Traer el usuario que se intenta modificar desde tu base de datos
     const targetUser = await prisma.user.findUnique({ 
@@ -81,29 +82,47 @@ export async function PATCH(
       )
     }
 
+    // 👇 INYECTAR ESTA NUEVA VALIDACIÓN PARA EL TELÉFONO CELULAR
+    const formattedPhone = phone.trim()
+    const phoneExists = await prisma.user.findFirst({
+      where: {
+        phone: formattedPhone,
+        NOT: { id: targetId },
+      },
+    })
+
+    if (phoneExists) {
+      return NextResponse.json(
+        { error: 'phone_taken', message: 'Este teléfono celular ya está registrado por otro usuario' }, 
+        { status: 409 }
+      )
+    }
+
     // 7. Si supera todos los filtros, actualizamos en la base de datos
     const updated = await prisma.user.update({
-      where: { id: targetId },
-      data: {
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        role: nextRole as any,
-      },
-      select: { 
+        where: { id: targetId },
+        data: {
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          role: nextRole,
+          phone: formattedPhone, // ◄ Agregar esta línea para actualizar el teléfono
+        },
+        select: { 
         id: true, 
         name: true, 
         email: true, 
+        phone: true, // ◄ Agregar esta línea para devolver el teléfono actualizado
         role: true,
         createdAt: true
-      },
+      }
     })
 
     return NextResponse.json(updated)
 
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: 'invalid_input', details: err.errors }, { status: 400 })
-    }
+    return NextResponse.json({ error: 'invalid_input', message: err.errors[0].message }, { status: 400 })
+  }
     console.error('[admin/users PATCH]', err)
     return NextResponse.json({ error: 'server_error' }, { status: 500 })
   }

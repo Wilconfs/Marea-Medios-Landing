@@ -56,15 +56,30 @@ export async function POST(req: NextRequest) {
     
     const data = parsed.data
 
+    // 🛡️ CONTROL TOTAL DE SESIÓN (Solución al error P2003):
+    // Intentamos extraer el ID desde todas las ubicaciones comunes de Next-Auth para asegurar que no se vaya un null.
+    const userIdToSave = 
+      session?.user?.id || 
+      (session?.user as any)?.sub || 
+      (session as any)?.userId
+
+    // Si por alguna razón la sesión se venció o no tiene ID, bloqueamos la inserción antes de que explote la DB.
+    if (!userIdToSave) {
+      return NextResponse.json(
+        { error: 'No autorizado. Por favor, cierra sesión y vuelve a ingresar para refrescar tus datos.' }, 
+        { status: 401 }
+      )
+    }
+
     // 2. Crear la orden incluyendo el tenantId detectado
     const order = await prisma.order.create({
       data: {
-        userId: session?.user?.id ?? null,
-        tenantId: tenant.id, // <--- ESTO ES LO QUE SOLUCIONA EL NULL
+        userId: userIdToSave, // ◄ Usamos la variable segura y verificada que jamás será null
+        tenantId: tenant.id,
         items: data.items as any,
         total: data.total,
-        customerName: data.customerName ?? session?.user?.name ?? null,
-        customerPhone: data.customerPhone ?? null,
+        customerName: data.customerName || session?.user?.name || 'Cliente Autenticado',
+        customerPhone: data.customerPhone || (session?.user as any)?.phone || null,
         notes: data.notes ?? null,
         whatsappSent: data.whatsappSent ?? true,
         status: 'PENDING',

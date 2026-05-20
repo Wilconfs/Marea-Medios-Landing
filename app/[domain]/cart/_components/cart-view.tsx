@@ -13,8 +13,10 @@ import { useCart } from '@/lib/cart-store'
 import { formatPrice } from '@/lib/format'
 import { buildWhatsAppMessage, buildWhatsAppUrl } from '@/lib/whatsapp'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
+  const router = useRouter()
   const { data: session } = useSession() || {}
   const items = useCart((s) => s?.items ?? [])
   const hasHydrated = useCart((s) => s?.hasHydrated)
@@ -22,6 +24,7 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
   const removeItem = useCart((s) => s?.removeItem)
   const clear = useCart((s) => s?.clear)
 
+  const [showLoginModal, setShowLoginModal] = useState(false) // ◄ NUEVO: Controla el modal del centro
   const [submitting, setSubmitting] = useState(false)
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -36,23 +39,24 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
   )
 
   const handleCheckout = async () => {
+    // 🛡️ CANDADO DE SEGURIDAD OBLIGATORIO: Si no hay sesión, rebota al login
+    if (!session?.user) {
+      setShowLoginModal(true)
+      return
+    }
+
     if (!items || items.length === 0) return
 
-    // Validar campos obligatorios
-    if (!customerName.trim()) {
-      toast.error('El nombre es obligatorio')
-      return
-    }
-    if (!customerPhone.trim()) {
-      toast.error('El celular es obligatorio')
-      return
-    }
 
-    const finalName = customerName.trim()
     setSubmitting(true)
+
+    // Extraemos los datos reales del usuario autenticado
+    const activeName = session.user.name || 'Cliente Autenticado'
+    const activePhone = (session.user as any).phone || ''
+    
     try {
-      // Save the order to DB
-      await fetch('/api/orders', {
+      // Guardar el pedido en la base de datos
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -63,14 +67,19 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
             quantity: i?.quantity,
             imageUrl: i?.imageUrl,
           })),
+          userId: (session?.user as any)?.id,
           total: subtotal,
-          customerName: finalName || undefined,
-          customerPhone: customerPhone.trim() || undefined,
+          customerName: activeName,
+          customerPhone: activePhone,
           whatsappSent: true,
         }),
       })
 
-      const message = buildWhatsAppMessage(items, subtotal, finalName)
+      if (!response.ok) {
+        throw new Error('Error al guardar el pedido')
+      }
+
+      const message = buildWhatsAppMessage(items, subtotal, activeName)
       const url = buildWhatsAppUrl(whatsappNumber, message)
       window.open(url, '_blank', 'noopener,noreferrer')
       toast.success('Abriendo WhatsApp...', {
@@ -257,35 +266,6 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
               </span>
             </div>
           </div>
-
-          <div className="space-y-2 pt-1">
-            <div>
-              <Label htmlFor="customer-name" className="text-xs">
-                Nombre <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="customer-name"
-                placeholder="Nombre completo"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="customer-phone" className="text-xs">
-                Celular <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="customer-phone"
-                type="tel"
-                placeholder="Ingrese número"
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
           <Button
             size="lg"
             className="w-full bg-emerald-600 hover:bg-emerald-700"
@@ -300,6 +280,64 @@ export function CartView({ whatsappNumber }: { whatsappNumber: string }) {
             Te abriremos WhatsApp con tu pedido listo para enviar.
           </p>
         </aside>
+
+        {/* MODAL CENTRADO DE INICIO DE SESIÓN OBLIGATORIO */}
+      <AnimatePresence>
+        {showLoginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Fondo oscuro traslúcido */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Caja del Modal en el centro */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-xl bg-card p-6 text-center shadow-2xl border border-border"
+            >
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <MessageCircle className="h-6 w-6" />
+              </div>
+
+              <h3 className="font-display text-xl font-bold tracking-tight text-foreground">
+                ¡Estás a un paso de enviar tu pedido!
+              </h3>
+              
+              <p className="mt-2 text-sm text-muted-foreground">
+                Para finalizar la compra y generar tu orden por WhatsApp, necesitas iniciar sesión o crear una cuenta rápida.
+              </p>
+
+              <div className="mt-6 flex flex-col gap-2">
+                <Button
+                  size="lg"
+                  className="w-full bg-primary font-medium text-primary-foreground hover:bg-primary/90"
+                  onClick={() => {
+                    setShowLoginModal(false)
+                    window.location.href = `/login?callbackUrl=${encodeURIComponent(window.location.href)}`
+                  }}
+                >
+                  Ir al inicio de sesión
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowLoginModal(false)}
+                >
+                  Continuar viendo el carrito
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       </div>
     </div>
   )
