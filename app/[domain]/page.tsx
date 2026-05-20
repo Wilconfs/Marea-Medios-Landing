@@ -109,112 +109,113 @@ if (searchFilter) {
       <HeroBanner />
     </div>
 
-        {/* 2. SECCIÓN CATEGORÍAS: Ahora con Título y Contexto */}
-        <section className="space-y-6 pt-12 md:pt-10">
-          <div className="flex flex-col items-center text-center space-y-2">
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Explora por Categorías
-            </h2>
-            <p className="text-slate-500 max-w-md">
-              Encuentra exactamente lo que necesitas navegando en nuestras colecciones especializadas.
+{/* 2. SECCIÓN CATEGORÍAS: Fusión Minimalista con el fondo */}
+        <section className="pt-12 md:pt-16">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+            <div className="space-y-1">
+              <span className="text-xs font-bold tracking-widest text-primary uppercase">Catálogo</span>
+              <h2 className="text-3xl font-black tracking-tight text-slate-900">
+                Filtra por Categorías
+              </h2>
+            </div>
+            <p className="text-slate-500 max-w-xs text-sm md:text-right">
+              Navega en nuestras categorías seleccionadas cuidadosamente.
             </p>
           </div>
           
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          {/* Quitamos la tarjeta blanca de fondo y dejamos las categorías flotando limpias */}
+          <div className="py-2 border-y border-slate-200/60 backdrop-blur-sm sticky top-[64px] z-30 bg-slate-50/80">
             <CategoryRow categories={categories} activeSlug={categoryFilter} />
           </div>
         </section>
 
-        {/* 3. SECCIÓN DE OFERTAS: (Si existe) */}
+        {/* 3. SECCIÓN DE OFERTAS: Diseño Asimétrico tipo Banner */}
         {showFlashSection && flashProducts.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-8 rounded-3xl border border-blue-100">
+          <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 sm:p-12 rounded-3xl text-white shadow-lg my-6">
+            <div className="absolute right-0 top-0 -mt-12 -mr-12 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
             <FlashSaleSection products={flashProducts as any} />
           </div>
         )}
 
-        {/* 4. SECCIÓN DE PRODUCTOS: Con jerarquía premium */}
-        <section id="productos" className="space-y-8">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 p-2 rounded-xl">
-                <Sparkles className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">Nuestros Productos</h2>
-                <p className="text-sm text-slate-500">Selección exclusiva de {tenant.name}</p>
-              </div>
+        {/* 4. SECCIÓN DE PRODUCTOS: Grid Limpio y Contemporáneo */}
+        <section id="productos" className="space-y-8 pt-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black tracking-tight text-slate-900">Nuestros Productos</h2>
+              <p className="text-xs text-slate-400">Modelos exclusivos de {tenant.name}</p>
             </div>
             
-            {/* Badge de cantidad para llenar espacio visual */}
-            <div className="hidden sm:block">
-              <span className="bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-full text-sm font-semibold shadow-sm">
-                {products.length} Artículos disponibles
+            <div>
+              <span className="bg-slate-900 text-white px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider">
+                {products.length} Items
               </span>
             </div>
           </div>
 
           {products.length === 0 ? (
-            <div className="p-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
-               <p className="text-slate-400 font-medium">No se encontraron productos en esta categoría.</p>
+            <div className="p-16 text-center bg-slate-100/50 rounded-2xl border border-dashed border-slate-200">
+               <p className="text-slate-400 text-sm font-medium">No hay existencias en esta sección.</p>
             </div>
           ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-8">
-                {products.map((p, i) => (
+            /* Subimos el gap visual del Grid para darle aire premium al diseño */
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {products.map((p, i) => (
                 <ProductCard key={p.id} product={p as any} index={i} />
               ))}
             </div>
           )}
         </section>
 
-        {/* 5. SECCIÓN EXTRA: Banner de confianza (FOOTER VISUAL) */}
+        {/* 5. BENEFICIOS: Minimalista y Horizontal sin cajas individuales */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-8 py-12 border-t border-slate-200/60 mt-12">
+          <div className="flex gap-4 items-start">
+            <div className="bg-slate-900 text-white p-3 rounded-2xl shrink-0">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-base">Envíos Rápidos</h4>
+              <p className="text-xs text-slate-500 mt-1">Recibe tus compras en tiempo récord en tu dirección.</p>
+            </div>
+          </div>
 
-{/* SECCIÓN DE BENEFICIOS AJUSTADA */}
-<section className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-slate-100">
-  
-  {/* Envíos Rápidos */}
-  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-    <div className="bg-blue-50 p-3 rounded-2xl mb-4">
-      <ShieldCheck className="h-8 w-8 text-blue-600" />
-    </div>
-    <h4 className="font-bold text-slate-800 text-lg">Envíos Rápidos</h4>
-    <p className="text-sm text-slate-500 mt-2">Recibe tus compras en tiempo récord.</p>
-  </div>
+          <div className="flex gap-4 items-start">
+            <div className="bg-slate-900 text-white p-3 rounded-2xl shrink-0">
+              <RefreshCw className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-base">Pago Seguro</h4>
+              <p className="text-xs text-slate-500 mt-1">Tus transacciones y datos están protegidos en todo momento.</p>
+            </div>
+          </div>
 
-  {/* Pago Seguro */}
-  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-    <div className="bg-purple-50 p-3 rounded-2xl mb-4">
-      <RefreshCw className="h-8 w-8 text-purple-600" />
-    </div>
-    <h4 className="font-bold text-slate-800 text-lg">Pago Seguro</h4>
-    <p className="text-sm text-slate-500 mt-2">Tus transacciones están protegidas.</p>
-  </div>
+          <div className="flex gap-4 items-start">
+            <div className="bg-slate-900 text-white p-3 rounded-2xl shrink-0">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-900 text-base">Calidad Garantizada</h4>
+              <p className="text-xs text-slate-500 mt-1">Garantía total sobre defectos de fábrica y calidad.</p>
+            </div>
+          </div>
+        </section>
 
-  {/* Calidad Garantizada */}
-  <div className="flex flex-col items-center p-8 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all text-center">
-    <div className="bg-green-50 p-3 rounded-2xl mb-4">
-      <MessageCircle className="h-8 w-8 text-green-600" />
-    </div>
-    <h4 className="font-bold text-slate-800 text-lg">Calidad Garantizada</h4>
-    <p className="text-sm text-slate-500 mt-2">Productos seleccionados cuidadosamente.</p>
-  </div>
-</section>
-       {/* 6. SECCIÓN COMUNIDAD / NEWSLETTER */}
-<section className="rounded-3xl bg-primary p-6 sm:p-10 text-center text-white shadow-xl">
-  <h3 className="text-2xl font-bold">¡Únete a nuestra comunidad!</h3>
-  <p className="mt-2 text-blue-100">Recibe ofertas exclusivas y novedades antes que nadie.</p>
-  
-  {/* Ajuste en el contenedor: flex-col para móviles, flex-row para pantallas sm en adelante */}
-  <div className="mx-auto mt-6 flex flex-col sm:flex-row max-w-md gap-3">
-    <input 
-      type="email" 
-      placeholder="Tu correo electrónico" 
-      className="w-full flex-1 rounded-xl border-none px-4 py-3 text-slate-900 focus:ring-2 focus:ring-accent"
-    />
-    <button className="w-full sm:w-auto rounded-xl bg-slate-900 px-6 py-3 font-bold transition-colors hover:bg-slate-800 whitespace-nowrap">
-      Suscribirme
-    </button>
-  </div>
-</section>
+        {/* 6. NEWSLETTER: Diseño Compacto Inline */}
+        <section className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white shadow-xl flex flex-col lg:flex-row items-center justify-between gap-6">
+          <div className="text-center lg:text-left space-y-1">
+            <h3 className="text-xl font-extrabold tracking-tight">¡Únete a Marea!</h3>
+            <p className="text-sm text-slate-400">Recibe ofertas exclusivas y novedades en tu correo.</p>
+          </div>
+          <div className="flex flex-col sm:flex-row w-full lg:w-auto max-w-md gap-2 shrink-0">
+            <input 
+              type="email" 
+              placeholder="Tu correo electrónico" 
+              className="rounded-xl border-none bg-slate-800/80 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-primary w-full sm:w-64"
+            />
+            <button className="w-full sm:w-auto rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90">
+              Suscribirme
+            </button>
+          </div>
+        </section>
               </div>
               <div className="container-page space-y-16 py-10">
             {/* ... tus otras secciones ... */}
