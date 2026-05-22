@@ -1,8 +1,29 @@
 {
+  "name": "marea-medios-landing",
+  "version": "1.0.0",
+  "description": "Npm version",
+  "homepage": "https://github.com/Wilconfs/Marea-Medios-Landing#readme",
+  "bugs": {
+    "url": "https://github.com/Wilconfs/Marea-Medios-Landing/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wilconfs/Marea-Medios-Landing.git"
+  },
+  "license": "ISC",
+  "author": "Wilconfs",
   "type": "module",
+  "main": "index.js",
+  "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1",
+      "dev": "serve public"
+    },
   "dependencies": {
     "express": "^5.2.1",
     "path": "^0.12.7",
     "url": "^0.11.4"
+  },
+  "devDependencies": {
+    "serve": "^14.2.6"
   }
 }
