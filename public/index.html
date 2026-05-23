@@ -196,7 +196,7 @@
     <script>
       (() => {
         // Número de soporte de la agencia con prefijo de Colombia (57)
-        const numeroAgenciaWhatsApp = "573000000000"; // 👈 REEMPLAZA CON TU NÚMERO REAL
+        const numeroAgenciaWhatsApp = "573044444261"; // 👈 REEMPLAZA CON TU NÚMERO REAL
 
         // 1. BYPASS INTERCEPTOR GLOBAL (Para los botones de Agendamiento del sitio de React)
         document.addEventListener("click", (event) => {
@@ -230,7 +230,7 @@
 
             if (!name || !email || !phone || !business) { errorDiv.textContent = "⚠ Completa los campos obligatorios (*)."; errorDiv.style.display = "block"; return; }
             
-            const mensajeFormateado = `🔥 *NUEVO LEAD - MAREA MEDIOS* 🔥%0A%0A• *Nombre:* ${encodeURIComponent(name)}%0A• *Correo:* ${encodeURIComponent(email)}%0A• *WhatsApp:* ${encodeURIComponent(phone)}%0A• *Negocio:* ${encodeURIComponent(business)}%0A• *Detalles:* ${encodeURIComponent(msg || 'Sin comentarios')}`;
+            const mensajeFormateado = `🔥 *Contacto - MAREA MEDIOS* 🔥%0A%0A• *Nombre:* ${encodeURIComponent(name)}%0A• *Correo:* ${encodeURIComponent(email)}%0A• *WhatsApp:* ${encodeURIComponent(phone)}%0A• *Negocio:* ${encodeURIComponent(business)}%0A• *Detalles:* ${encodeURIComponent(msg || 'Sin comentarios')}`;
             window.open(`https://wa.me/${numeroAgenciaWhatsApp}?text=${mensajeFormateado}`, '_blank');
             closeModal(); document.getElementById("marea-modal-form").reset();
           });
@@ -303,7 +303,7 @@
             return;
           }
 
-          const msjEstructurado = `⚡ *SOPORTE MAREA MEDIOS* ⚡%0A%0A💬 *Mensaje:* ${encodeURIComponent(texto)}%0A%0A_Enviado desde el widget de asistencia técnica de la web._`;
+          const msjEstructurado = `⚡ *SOPORTE - MAREA MEDIOS* ⚡%0A%0A💬 *Mensaje:* ${encodeURIComponent(texto)}%0A%0A_En breve recibirás respuesta de nosotros, ¡Gracias por escribirnos!._`;
           window.open(`https://wa.me/${numeroAgenciaWhatsApp}?text=${msjEstructurado}`, '_blank');
           
           closeFloatingChat();
