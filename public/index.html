@@ -70,7 +70,7 @@
       .marea-chat-status span { color: #888888; font-size: 11px; }
       .marea-chat-card-close { background: transparent; border: none; color: #666; font-size: 22px; cursor: pointer; line-height: 1; }
       .marea-chat-card-close:hover { color: #ffde59; }
-
+      
       /* Cuerpo y Form */
       .marea-chat-card-body { padding: 16px; background: #161616; display: flex; flex-direction: column; gap: 12px; }
       .marea-chat-card-textarea {
@@ -104,6 +104,150 @@
         .marea-floating-widget { bottom: 20px; right: 20px; }
         .marea-chat-card { width: 290px; }
       }
+              /* Oculta con precisión quirúrgica la sección de Nuestros números / Cifras que hablan */
+        div:has(> div > span:contains("Nuestros números")),
+        div:has(> h2:contains("CIFRAS QUE")) {
+            display: none !important;
+        }
+
+        /* Regla alternativa basada en sus clases específicas por si la anterior no se procesa */
+        .reveal.mb-24:has(.grid-cols-2.lg\:grid-cols-4) {
+            display: none !important;
+        }
+
+              /* --- ESTILOS SECCIÓN SAAS E-COMMERCE --- */
+      .marea-saas-section {
+        background: #0a0a0a;
+        color: #ffffff;
+        padding: 80px 20px;
+        font-family: 'Open Sans', sans-serif;
+        border-top: 1px solid #1a1a1a;
+      }
+      .marea-saas-container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .marea-saas-tag {
+        font-family: 'Open Sans', sans-serif;
+        color: #ffde59;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        display: block;
+        margin-bottom: 10px;
+      }
+      .marea-saas-title {
+        font-family: 'Anton', sans-serif;
+        font-size: clamp(2rem, 4vw, 3.5rem);
+        text-transform: uppercase;
+        line-height: 0.95;
+        margin-bottom: 30px;
+      }
+      .marea-saas-grid {
+        display: grid;
+        grid-cols: 1;
+        gap: 40px;
+        align-items: center;
+      }
+      @media (min-width: 960px) {
+        .marea-saas-grid { grid-template-columns: 1fr 1fr; }
+      }
+      .marea-saas-features {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .marea-saas-card {
+        background: #121212;
+        border: 1px solid #222;
+        padding: 20px;
+        border-radius: 8px;
+        transition: border-color 0.3s;
+      }
+      .marea-saas-card:hover {
+        border-color: #ffde59;
+      }
+      .marea-saas-card h3 {
+        font-size: 18px;
+        color: #ffde59;
+        margin: 0 0 8px 0;
+      }
+      .marea-saas-card p {
+        font-size: 14px;
+        color: #aaa;
+        margin: 0;
+        line-height: 1.5;
+      }
+      .marea-saas-btn-group {
+        margin-top: 30px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+      }
+      .marea-btn-demo {
+        background: #ffde59;
+        color: #000000;
+        font-family: 'Anton', sans-serif;
+        font-size: 16px;
+        text-transform: uppercase;
+        padding: 14px 28px;
+        text-decoration: none;
+        letter-spacing: 1px;
+        transition: background 0.3s, transform 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .marea-btn-demo:hover {
+        background: #ffffff;
+        transform: translateY(-2px);
+      }
+      /* Grid de imágenes simulando tus capturas */
+      .marea-saas-gallery {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+      }
+      .marea-saas-img-wrapper {
+        background: #161616;
+        border: 1px solid #2d2d2d;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      }
+      .marea-saas-gallery .marea-saas-img-wrapper:nth-child(1) { grid-column: span 2; } /* Destaca tu dashboard principal */
+      .marea-saas-img-wrapper img {
+        width: 100%;
+        height: auto;
+        display: block;
+        opacity: 0.85;
+        transition: opacity 0.3s;
+      }
+      .marea-saas-img-wrapper:hover img { opacity: 1; }
+      
+      /* Galería con imágenes un 15% más grandes */
+      .marea-saas-gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+      .marea-saas-img-wrapper { background: #0a0a0a; border: 1px solid #1f1f1f; border-radius: 10px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.8); transition: transform 0.3s, border-color 0.3s; cursor: zoom-in; }
+      .marea-saas-gallery .marea-saas-img-wrapper:nth-child(1) { grid-column: span 2; }
+      .marea-saas-img-wrapper:hover { transform: scale(1.03); border-color: #ffde59; }
+      .marea-saas-img-wrapper img { width: 100%; height: auto; display: block; opacity: 0.88; transition: opacity 0.3s; }
+      .marea-saas-img-wrapper:hover img { opacity: 1; }
+
+      /* --- NUEVA MODAL PARA PASAR LAS IMÁGENES --- */
+      .marea-img-modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(10px);
+        z-index: 99999999 !important; display: none; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.3s ease;
+      }
+      .marea-img-modal-overlay.marea-active { opacity: 1; display: flex; }
+      .marea-img-modal-content { max-width: 90%; max-height: 85vh; position: relative; transform: scale(0.95); transition: transform 0.3s ease; }
+      .marea-img-modal-overlay.marea-active .marea-img-modal-content { transform: scale(1); }
+      .marea-img-modal-content img { max-width: 100%; max-height: 85vh; object-fit: contain; border: 2px solid #222; border-radius: 6px; }
+      .marea-img-modal-close { position: fixed; top: 20px; right: 25px; background: transparent; border: none; color: #fff; font-size: 42px; cursor: pointer; font-weight: 300; }
+      .marea-img-modal-close:hover { color: #ffde59; }
+      
     </style>
   </head>
 
@@ -153,8 +297,7 @@
         </form>
       </div>
     </div>
-
-
+    
     <div class="marea-floating-widget" id="marea-support-widget">
       
       <div class="marea-chat-card" id="marea-chat-card">
@@ -171,7 +314,7 @@
         
         <div class="marea-chat-card-body">
           <form id="marea-chat-floating-form" onsubmit="return false;">
-            <textarea class="marea-chat-card-textarea" id="marea-widget-text" placeholder="Escribe tu mensaje..."></textarea>
+            <textarea class="marea-chat-card-textarea" id="marea-widget-text" placeholder="Escribe tu mensaje...">Hola Marea Medios, estoy interesad@ en recibir más información sobre sus servicios de marketing y contenido digital.</textarea>
             <div class="marea-chat-card-footer">
               <button type="button" class="marea-chat-card-send" id="marea-widget-send-arrow">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -191,8 +334,13 @@
       </button>
 
     </div>
-
-
+    
+<div id="marea-img-modal" class="marea-img-modal-overlay">
+      <button class="marea-img-modal-close" id="close-marea-img-modal">&times;</button>
+      <div class="marea-img-modal-content">
+        <img id="marea-modal-target-img" src="" alt="Vista previa ampliada">
+      </div>
+    </div>
     <script>
       (() => {
         // Número de soporte de la agencia con prefijo de Colombia (57)
@@ -201,7 +349,12 @@
         // 1. BYPASS INTERCEPTOR GLOBAL (Para los botones de Agendamiento del sitio de React)
         document.addEventListener("click", (event) => {
           const target = event.target.closest("button, a");
-          if (target && (target.textContent.toUpperCase().includes("AGENDA") || target.textContent.toUpperCase().includes("MENSAJE"))) {
+          if (target && (target.textContent.toUpperCase().includes("AGENDA") || target.textContent.toUpperCase().includes("MENSAJE")) ||
+          target.textContent.toUpperCase().includes("EMPEZAR AHORA") ||
+          target.textContent.toUpperCase().includes("EL MÁS POPULAR") ||
+          target.textContent.toUpperCase().includes("QUIERO EL PREMIUM") ||
+          target.classList.contains("marea-saas-card-btn"))
+          {
             if (target.id === "marea-submit-btn" || target.id === "marea-widget-toggle-btn" || target.id === "marea-widget-send-arrow" || target.id === "close-chat-card-btn") return;
             
             event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
@@ -309,6 +462,103 @@
           closeFloatingChat();
         }
       })();
+      // Mover la sección de suscripción exactamente arriba del footer de React
+const organizarSeccionSaas = () => {
+  const saasSection = document.getElementById("marea-ecommerce-saas-section");
+  const footerElement = document.querySelector('div[data-loc^="client/src/components/Footer.tsx"]');
+  
+  if (footerElement && saasSection && saasSection.nextSibling !== footerElement) {
+    footerElement.parentNode.insertBefore(saasSection, footerElement);
+  }
+};
+
+// Se ejecuta al cargar y monitorea si React redibuja el DOM
+organizarSeccionSaas();
+setInterval(organizarSeccionSaas, 500);
+// 🔍 LÓGICA MEJORADA DE DELEGACIÓN DE CLIC PARA LAS IMÁGENES
+        const imgModal = document.getElementById("marea-img-modal");
+        const modalTargetImg = document.getElementById("marea-modal-target-img");
+        const closeImgModalBtn = document.getElementById("close-marea-img-modal");
+
+        // Escuchamos los clics en cualquier parte de la sección SaaS de forma dinámica
+        document.addEventListener("click", (e) => {
+          // Buscamos si el clic ocurrió dentro de un contenedor de imagen de la sección
+          const imgWrapper = e.target.closest(".marea-saas-img-wrapper");
+          if (imgWrapper && imgModal && modalTargetImg) {
+            const imgInside = imgWrapper.querySelector("img");
+            if (imgInside) {
+              modalTargetImg.src = imgInside.src; // Pasa la ruta del screenshot
+              imgModal.style.display = "flex";
+              setTimeout(() => imgModal.classList.add("marea-active"), 10);
+            }
+          }
+        });
+
+        const cerrarModalImagen = () => {
+          if (imgModal) {
+            imgModal.classList.remove("marea-active");
+            setTimeout(() => imgModal.style.display = "none", 300);
+          }
+        };
+
+        if (closeImgModalBtn) closeImgModalBtn.addEventListener("click", cerrarModalImagen);
+        if (imgModal) {
+          imgModal.addEventListener("click", (e) => {
+            if (e.target === imgModal) cerrarModalImagen();
+          });
+        }
     </script>
+    <section class="marea-saas-section" id="marea-ecommerce-saas-section">
+      <div id="sistemas" class="marea-saas-container">
+        <div class="marea-saas-grid">
+          
+          <div>
+            <span class="marea-saas-tag">Infraestructura SaaS Premium</span>
+            <h2 class="marea-saas-title">Tu propia tienda online<br>bajo modelo de <span style="color: #ffde59;">Suscripción</span></h2>
+            <p style="color: #888; font-size: 14.5px; margin-bottom: 30px; line-height: 1.6; text-align: left;">
+              Le damos superpoderes digitales a tu marca. Accede a una plataforma robusta, ultra rápida y autoadministrable diseñada para multiplicar tus ventas sin costos ocultos de desarrollo ni configuraciones complejas.
+            </p>
+            
+           <div class="marea-saas-features">
+              <div class="marea-saas-card">
+                <h3>🛍️ Plataforma Todo en Uno</h3> <p>Una arquitectura inteligente que te permite controlar stock, categorías y catálogos en tiempo real de forma independiente y centralizada.</p>
+              </div>
+              <div class="marea-saas-card">
+                <h3>💳 Pasarela de Pagos & Checkout Eficiente</h3>
+                <p>Procesamiento de compras optimizado y seguro, ideal para transacciones fluidas que evitan carritos abandonados.</p>
+              </div>
+              <div class="marea-saas-card">
+                <h3>📊 Panel de Métricas Administrativas</h3>
+                <p>Monitorea y analiza las órdenes ingresadas, bases de datos de clientes y la facturación de tu negocio al instante.</p>
+              </div>
+            </div>
+
+            <div class="marea-saas-btn-group">
+              <a href="https://tienda.mareamedios.com" target="_blank" class="marea-btn-demo">
+                PROBAR DEMO EN VIVO
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                  <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5"/>
+                  <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div class="marea-saas-gallery">
+            <div class="marea-saas-img-wrapper">
+              <img src="./manus-storage/dashboard.png" alt="SaaS Dashboard Analytics">
+            </div>
+            <div class="marea-saas-img-wrapper">
+              <img src="./manus-storage/tienda.png" alt="E-commerce Store Management">
+            </div>
+            <div class="marea-saas-img-wrapper">
+              <img src="./manus-storage/orders.png" alt="Checkout Responsivo">
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+    
   </body>
 </html>
