@@ -7,29 +7,59 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Tag, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-// 1. Definimos los slides (puedes cambiar las imágenes y textos fácilmente)
+// 1. Array de 5 slides con la estructura exacta que requiere tu componente
 const SLIDES = [
   {
     id: 1,
-    tag: '#BigFashionSale',
-    title: '¡Oferta por Tiempo Limitado!',
-    subtitle: 'Hasta 50% OFF',
-    description: 'Renueva tu estilo con descuentos imperdibles en moda, calzado y accesorios.',
-    image: 'https://cdn.abacus.ai/images/9ab4aeaa-f741-4054-b137-a7ea64a06f41.png',
-    color: 'from-blue-600 via-blue-700 to-blue-900',
-    link: '/#productos'
+    tag: '#MasterRace2026',
+    title: 'Potencia Sin Límites',
+    subtitle: 'Hardware de Última Generación',
+    description: 'Arma o actualiza tu setup con las mejores tarjetas gráficas, procesadores y componentes del mercado con garantía oficial.',
+    image: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?q=80&w=2070&auto=format&fit=crop',
+    color: 'from-zinc-900 via-slate-800 to-zinc-950', // Gradiente oscuro premium / setup gamer
+    link: '#productos'
   },
   {
     id: 2,
-    tag: '#NuevaColeccion',
-    title: 'Estilo que te Define',
-    subtitle: 'Temporada 2024',
-    description: 'Descubre las tendencias que están marking el paso este año.',
-    image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=2070&auto=format&fit=crop',
-    color: 'from-purple-600 via-indigo-700 to-indigo-900',
+    tag: '#RGBPeripherals',
+    title: 'Inmersión Total',
+    subtitle: 'Periféricos Premium',
+    description: 'Domina cada partida con teclados mecánicos, ratones de alta precisión y monitores con tasas de refresco brutales.',
+    image: 'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?q=80&w=2080&auto=format&fit=crop',
+    color: 'from-purple-900 via-indigo-950 to-slate-950', // Gradiente cyberpunk / nocturno
+    link: '#productos'
+  },
+  {
+    id: 3,
+    tag: '#GarantiaDirecta',
+    title: 'Respaldo Absoluto',
+    subtitle: 'Componentes Asegurados',
+    description: 'Compra con la total tranquilidad de contar con soporte técnico especializado local y cobertura directa de fábrica.',
+    image: 'https://images.unsplash.com/photo-1591488320449-011701bb6704?q=80&w=2070&auto=format&fit=crop',
+    color: 'from-blue-950 via-slate-900 to-indigo-950', // Gradiente azul tecnológico
+    link: '#productos'
+  },
+  {
+    id: 4,
+    tag: '#AsesoriaCustom',
+    title: 'Armado a tu Medida',
+    subtitle: 'Compatibilidad 100%',
+    description: '¿Dudas de hardware? Te guiamos de forma personalizada para que configures la workstation de desarrollo o PC gaming que sueñas.',
+    image: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop',
+    color: 'from-slate-900 via-emerald-950 to-slate-900', // Gradiente verde Matrix / Workspace
+    link: '#productos'
+  },
+  {
+    id: 5,
+    tag: '#EnviosPriority',
+    title: 'Logística Segura',
+    description: 'Recibe todo el hardware directamente en tu puerta en Bogotá en tiempo récord, con empaque blindado de alta protección.',
+    subtitle: 'Envíos Rápidos y Asegurados',
+    image: 'https://images.unsplash.com/photo-1566241477600-ac026ad43874?q=80&w=2092&auto=format&fit=crop',
+    color: 'from-indigo-950 via-slate-900 to-purple-950', // Gradiente índigo violeta
     link: '#productos'
   }
-]
+];
 
 export function HeroBanner() {
   const [current, setCurrent] = useState(0)
@@ -46,12 +76,8 @@ export function HeroBanner() {
   const prevSlide = () => setCurrent((prev) => (prev === 0 ? SLIDES.length - 1 : prev - 1))
 
   return (
-    /* CAMBIOS REALIZADOS EN LA SECCIÓN:
-       1. Reemplazamos w-full por w-[100vw] para forzar el ancho total de la ventana.
-       2. Añadimos relative left-[50%] right-[50%] -translate-x-[50%] para centrar el bloque completo.
-       3. Cambiamos bg-gray-950 por bg-card para unificar con el header.
-    */
-    <section className="group relative h-[520px] w-[100vw] relative left-[50%] right-[50%] -translate-x-[50%] overflow-hidden bg-card lg:h-[640px] select-none">
+    /* Corregida la doble declaración de 'relative' en el container */
+    <section className="group relative h-[520px] w-[100vw] left-[50%] right-[50%] -translate-x-[50%] overflow-hidden bg-card lg:h-[640px] select-none">
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -139,7 +165,7 @@ export function HeroBanner() {
         <ChevronRight className="h-6 w-6" />
       </button>
 
-      {/* Indicadores (Puntos abajo) */}
+      {/* Indicadores (Puntos abajo actualizados dinámicamente para los 5 elementos) */}
       <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2 z-30">
         {SLIDES.map((_, i) => (
           <button

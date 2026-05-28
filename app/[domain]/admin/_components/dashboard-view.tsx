@@ -22,6 +22,8 @@ type Stats = {
     rating: number
     soldCount: number
     price: number
+    stock?: number // 👈 AGREGA ESTA LÍNEA
+    isActive: boolean // 👈 AGREGAR ESTA LÍNEA
   }[]
   recentOrders: {
     id: string;
@@ -275,16 +277,23 @@ export function DashboardView() {
                     )}
                   </div>
                   <div className="flex-1 truncate">
-                    <p className="truncate text-sm font-medium">{p.name}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
-                        {p.rating?.toFixed(1) ?? '0.0'}
-                      </span>
-                      <span>•</span>
-                      <span>{formatNumber(p.soldCount)} vendidos</span>
-                    </div>
-                  </div>
+  <p className="truncate text-sm font-medium text-slate-800">{p.name}</p>
+  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+    <span className="font-medium text-slate-600">
+      {formatNumber(p.soldCount ?? 0)} vendidos
+    </span>
+    <span>•</span>
+    
+    {/* ⚡ LÓGICA DIRECTA Y REAL DESDE LA BASE DE DATOS */}
+    {!p.isActive ? (
+      <span className="font-semibold text-slate-400">Desactivado</span>
+    ) : p.stock === 0 ? (
+      <span className="font-semibold text-rose-500">Sin stock</span>
+    ) : (
+      <span className="font-medium text-emerald-600">Disponible</span>
+    )}
+  </div>
+</div>
                   <p className="font-mono text-sm font-semibold">
                     {formatPrice(p.price)}
                   </p>

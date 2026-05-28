@@ -77,6 +77,8 @@ export async function GET() {
         rating: true,
         soldCount: true,
         price: true,
+        stock: true,    // 👈 ASEGÚRATE DE INCLUIR ESTA LÍNEA
+        isActive: true
       },
     })
 
