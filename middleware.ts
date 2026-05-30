@@ -5,10 +5,11 @@ export function middleware(request: NextRequest) {
   const url = request.nextUrl
   // El .split(':')[0] quita el ":3000" para que Windows no sufra
   const hostname = request.headers.get('host')?.split(':')[0].toLowerCase() || ''
-  const path = url.pathname
+  const path = url.pathname.toLowerCase() // 👈 Aseguramos minúsculas para comparar bien
 
   // 1. LISTA DE EXCLUSIÓN
   if (
+    path.startsWith('/api/') || // 👈 Aseguramos que sea la carpeta api
     path.startsWith('/api') ||
     path.startsWith('/_next') ||
     path.includes('.') 

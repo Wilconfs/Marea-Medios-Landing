@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Loader2, Save, MessageCircle, CreditCard, Store } from 'lucide-react'
+import { Loader2, Save, MessageCircle, CreditCard, Store, Sliders } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,14 @@ type Settings = {
   currency: string
 }
 
+type ModuleItem = {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  isActive: boolean
+}
+
 const DEFAULTS: Settings = {
   storeName: 'Tienda Marea',
   whatsappNumber: '573001234567',
@@ -24,29 +32,75 @@ const DEFAULTS: Settings = {
 
 export function SettingsView() {
   const [data, setData] = useState<Settings>(DEFAULTS)
+  const [modules, setModules] = useState<ModuleItem[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [updatingModuleId, setUpdatingModuleId] = useState<string | null>(null)
 
-  // TODO: Reemplaza este ID temporal por el ID real de un Tenant activo de tu DB para tus pruebas locales
-  const currentTenantId = "cmoucoukg0002lrydz41trsbn" 
-
+  // 📡 CARGA INICIAL: El backend deduce quién eres por tu sesión
   useEffect(() => {
-    fetch(`/api/admin/settings?tenantId=${currentTenantId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d && typeof d === 'object' && !d.error) {
+    async function loadData() {
+      try {
+        // 1. Cargar configuraciones básicas globales
+        const settingsRes = await fetch('/api/admin/settings')
+        const settingsData = await settingsRes.json()
+        
+        if (settingsData && typeof settingsData === 'object' && !settingsData.error) {
           setData({
-            storeName: d.storeName ?? DEFAULTS.storeName,
-            whatsappNumber: d.whatsappNumber ?? DEFAULTS.whatsappNumber,
-            paymentMethod: d.paymentMethod ?? DEFAULTS.paymentMethod,
-            currency: d.currency ?? DEFAULTS.currency,
+            storeName: settingsData.storeName ?? DEFAULTS.storeName,
+            whatsappNumber: settingsData.whatsappNumber ?? DEFAULTS.whatsappNumber,
+            paymentMethod: settingsData.paymentMethod ?? DEFAULTS.paymentMethod,
+            currency: settingsData.currency ?? DEFAULTS.currency,
           })
         }
-      })
-      .finally(() => setLoading(false))
-  }, [currentTenantId])
 
-async function save() {
+        // 2. Cargar los módulos dinámicos asignados a tu sesión
+        const modulesRes = await fetch('/api/admin/modules')
+        if (modulesRes.ok) {
+          const modulesData = await modulesRes.json()
+          setModules(modulesData.modules || [])
+        }
+      } catch (err) {
+        console.error("Error cargando la configuración:", err)
+        toast.error('Error al cargar los datos del comercio')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, []) // El arreglo vacío significa que corre una sola vez al cargar la página
+
+  // 🎛️ CONTROL DEL INTERRUPTOR: Cero IDs quemados
+  async function handleToggleModule(moduleId: string, currentStatus: boolean) {
+    setUpdatingModuleId(moduleId)
+    try {
+      const res = await fetch('/api/admin/modules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleId: moduleId,
+          isActive: !currentStatus
+        })
+      })
+
+      if (!res.ok) throw new Error()
+      
+      setModules((prev) =>
+        prev.map((mod) =>
+          mod.id === moduleId ? { ...mod, isActive: !currentStatus } : mod
+        )
+      )
+      toast.success('Módulo actualizado correctamente')
+    } catch {
+      toast.error('No se pudo cambiar el estado del módulo')
+    } finally {
+      setUpdatingModuleId(null)
+    }
+  }
+
+  // 💾 GUARDAR AJUSTES BÁSICOS
+  async function save() {
     if (!data.storeName.trim()) {
       toast.error('El nombre de la tienda es obligatorio')
       return
@@ -59,9 +113,6 @@ async function save() {
 
     setSaving(true)
     try {
-      // !!! VE A TU BASE DE DATOS Y COPIA UN ID REAL DE LA TABLA TENANT !!!
-      const idRealDeTuTienda = "cmouehzwk0000eo81fuyf0s37" 
-
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -71,14 +122,14 @@ async function save() {
             whatsappNumber: cleanWa,
             paymentMethod: data.paymentMethod,
             currency: data.currency,
-          },
-          tenantId: idRealDeTuTienda // <-- Enviamos el ID real que la base de datos sí conoce
+          }
+          // El backend asume el tenantId por sesión, no se envía por el cliente
         }),
       })
       if (!res.ok) throw new Error()
       toast.success('Configuración guardada con éxito')
     } catch {
-      toast.error('No se pudo guardar')
+      toast.error('No se pudo guardar la configuración')
     } finally {
       setSaving(false)
     }
@@ -97,11 +148,11 @@ async function save() {
       <div>
         <h1 className="font-display text-2xl font-bold tracking-tight">Configuración</h1>
         <p className="text-sm text-muted-foreground">
-          Ajustes globales de la tienda
+          Ajustes globales de la tienda y administración de características.
         </p>
       </div>
 
-      {/* Store info */}
+      {/* Info de la tienda */}
       <div className="rounded-lg bg-card p-6" style={{ boxShadow: 'var(--shadow-sm)' }}>
         <div className="mb-5 flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -156,7 +207,7 @@ async function save() {
         </div>
       </div>
 
-      {/* Payment method */}
+      {/* Método de pago */}
       <div className="rounded-lg bg-card p-6" style={{ boxShadow: 'var(--shadow-sm)' }}>
         <div className="mb-5 flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
@@ -205,18 +256,66 @@ async function save() {
             <p className="mt-2 text-xs text-muted-foreground">Pagos con tarjeta, Nequi y Daviplata. Requiere configurar credenciales (próximamente).</p>
           </button>
         </div>
-
-        {data.paymentMethod === 'mercadopago' && (
-          <div className="mt-4 rounded-md bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
-            ⚠️ La integración con Mercado Pago requiere claves de API. Mientras se configura, los pedidos seguirán usando WhatsApp como respaldo.
-          </div>
-        )}
       </div>
 
-      <div className="flex justify-end">
+      {/* SECCIÓN MÓDULOS DE CARACTERÍSTICAS */}
+      <div className="rounded-lg bg-card p-6" style={{ boxShadow: 'var(--shadow-sm)' }}>
+        <div className="mb-5 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <Sliders className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-display text-base font-semibold">Módulos y Características</h2>
+            <p className="text-xs text-muted-foreground">Activa o inactiva las extensiones modulares de tu plataforma.</p>
+          </div>
+        </div>
+
+        <div className="divide-y divide-border rounded-md border bg-background">
+          {modules.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground text-center">No hay módulos disponibles para este comercio.</p>
+          ) : (
+            modules.map((mod) => (
+              <div key={mod.id} className="flex items-center justify-between p-4 transition-colors hover:bg-muted/50">
+                <div className="space-y-0.5 pr-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm text-foreground">{mod.name}</span>
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold text-muted-foreground">
+                      {mod.code}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {mod.description || 'Sin descripción asignada.'}
+                  </p>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleModule(mod.id, mod.isActive)}
+                    disabled={updatingModuleId === mod.id}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                      mod.isActive ? "bg-primary" : "bg-muted",
+                      updatingModuleId === mod.id && "opacity-50 cursor-not-allowed"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow ring-0 transition duration-200 ease-in-out",
+                        mod.isActive ? "translate-x-5" : "translate-x-0"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3">
         <Button onClick={save} disabled={saving} size="lg">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Guardar cambios
+          Guardar cambios globales
         </Button>
       </div>
     </div>

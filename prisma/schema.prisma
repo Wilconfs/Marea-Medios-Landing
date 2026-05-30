@@ -24,51 +24,81 @@ enum OrderStatus {
   CANCELLED
 }
 
+// 1. Catálogo global de módulos que ofrece tu plataforma (E-COMMERCE, POS_CAJA, INVENTARIO, ETC.)
+model Module {
+  id          String         @id @default(uuid())
+  code        String         @unique // Ej: "ECOM", "POS_CAJA", "INVT"
+  name        String // Ej: "E-commerce Completo", "Gestión de Caja (POS)"
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tenants     TenantModule[]
+}
+
+// 2. Tabla relacional: Controla qué cliente tiene qué módulo y si está prendido o apagado
+model TenantModule {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  isActive  Boolean  @default(false) // El switch de encendido/apagado (TRUE = Activo, FALSE = Inactivo)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, moduleId]) // Evita que un cliente tenga el mismo módulo duplicado
+  @@index([tenantId])
+  @@index([moduleId])
+}
+
 // 1. Nueva tabla para los Clientes/Empresas
 model Tenant {
-  id        String     @id @default(cuid())
-  name      String     // Nombre del negocio
-  slug      String     @unique // Para la URL (ej: taller-perez)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id        String   @id @default(cuid())
+  name      String // Nombre del negocio
+  slug      String   @unique // Para la URL (ej: taller-perez)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relaciones
-  users      User[]
-  categories Category[]
-  products   Product[]
-  orders     Order[]
-  settings   Setting[]
+  users        User[]
+  categories   Category[]
+  products     Product[]
+  orders       Order[]
+  settings     Setting[]
+  modules      TenantModule[]
+  cashSessions CashSession[]
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String @id @default(cuid())
   name         String
-  email        String   @unique
-  phone        String   @default("") // ◄ AGREGA ESTO TEMPORALMENTE
+  email        String @unique
+  phone        String @default("") // ◄ AGREGA ESTO TEMPORALMENTE
   passwordHash String
-  role         Role     @default(CLIENTE)
-  
+  role         Role   @default(CLIENTE)
+
   // Relación con Tenant (Opcional para permitir la migración inicial)
-  tenantId     String?
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   orders       Order[]
+  cashSessions CashSession[]
 
   @@index([tenantId])
 }
 
 model Category {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  icon      String
-  
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+  icon String
+
   // Relación con Tenant
-  tenantId  String?
-  tenant    Tenant?   @relation(fields: [tenantId], references: [id])
-  
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
   createdAt DateTime  @default(now())
   products  Product[]
 
@@ -76,28 +106,28 @@ model Category {
 }
 
 model Product {
-  id            String   @id @default(cuid())
+  id            String  @id @default(cuid())
   name          String
-  description   String   @db.Text
-  imageUrl      String   @db.Text // ÚNICA LÍNEA PARA IMÁGENES
+  description   String  @db.Text
+  imageUrl      String  @db.Text // ÚNICA LÍNEA PARA IMÁGENES
   price         Float
   originalPrice Float?
   discount      Int?
-  rating        Float    @default(0)
-  soldCount     Int      @default(0)
-  stock         Int      @default(0)
-  isActive      Boolean  @default(true)
-  isFlashSale   Boolean  @default(false)
-  
-  // Relaciones
-  categoryId    String
-  category      Category @relation(fields: [categoryId], references: [id])
-  
-  tenantId      String?
-  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+  rating        Float   @default(0)
+  soldCount     Int     @default(0)
+  stock         Int     @default(0)
+  isActive      Boolean @default(true)
+  isFlashSale   Boolean @default(false)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  // Relaciones
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([categoryId])
   @@index([isActive])
@@ -117,11 +147,11 @@ model Order {
   notes         String?     @db.Text
 
   // Relación con Tenant
-  tenantId      String?
-  tenant        Tenant?     @relation(fields: [tenantId], references: [id])
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -129,13 +159,13 @@ model Order {
 }
 
 model Setting {
-  id        String   @id @default(cuid())
-  key       String   // <-- LE QUITAMOS EL @unique AQUÍ
-  value     String
-  
+  id    String @id @default(cuid())
+  key   String // <-- LE QUITAMOS EL @unique AQUÍ
+  value String
+
   // Las configuraciones también deben ser por cliente
-  tenantId  String?
-  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -148,10 +178,48 @@ model Setting {
 model MessageTemplate {
   id        String   @id @default(cuid())
   tenantId  String
-  type      String   // "PREPARACION", "ENVIADO", "ENTREGADO"
+  type      String // "PREPARACION", "ENVIADO", "ENTREGADO"
   message   String   @db.Text // El mensaje con variables como {cliente} o {pedido}
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([tenantId, type]) // Evita que una tienda tenga duplicado un mismo tipo
+}
+
+model CashSession {
+  id              String    @id @default(uuid())
+  tenantId        String
+  userId          String // Quién abrió la caja
+  openedAt        DateTime  @default(now())
+  closedAt        DateTime? // Si está null, la caja sigue abierta
+  openingBalance  Float // Con cuánto dinero arrancó
+  expectedBalance Float // Lo que el sistema calcula que debería haber al cerrar
+  actualBalance   Float? // Lo que el cajero contó físicamente
+  status          String    @default("OPEN") // OPEN, CLOSED
+  notes           String?   @db.Text
+
+  // Relaciones
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id])
+  movements CashMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model CashMovement {
+  id            String   @id @default(uuid())
+  cashSessionId String
+  type          String // INCOME (Ingreso), EXPENSE (Egreso), SALE (Venta POS)
+  amount        Float
+  description   String
+  createdAt     DateTime @default(now())
+
+  // Relaciones
+  session CashSession @relation(fields: [cashSessionId], references: [id], onDelete: Cascade)
+
+  @@index([cashSessionId])
 }

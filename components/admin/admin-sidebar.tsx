@@ -1,7 +1,9 @@
 'use client'
-
+import { isModuleActive } from "@/lib/modules";
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+// 1. Importa el icono arriba si no lo tienes:
+import { Wallet } from 'lucide-react'
 import {
   LayoutDashboard,
   Package,
@@ -24,6 +26,29 @@ type Item = {
   roles?: UserRole[]
 }
 
+export async function SidebarAdmin({ tenantId }: { tenantId: string }) {
+  // Verificamos si el switch de la caja está encendido para este cliente
+  const showPOS = await isModuleActive(tenantId, "POS_CAJA");
+
+  return (
+    <aside className="w-64 bg-card border-r h-screen p-4 space-y-2">
+      {/* Enlaces comunes que siempre se ven */}
+      <a href="/admin/dashboard">Resumen</a>
+      <a href="/admin/products">Productos</a>
+      <a href="/admin/orders">Órdenes</a>
+      
+      {/* 👇 SI EL MÓDULO ESTÁ ACTIVO, SE MUESTRA EN EL MENÚ */}
+      {showPOS && (
+        <a href="/admin/caja" className="flex items-center gap-2 text-purple-600 font-semibold">
+          <span>🏪</span> Gestión de Caja (POS)
+        </a>
+      )}
+
+      <a href="/admin/settings">Configuración</a>
+    </aside>
+  );
+}
+
 const items: Item[] = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Productos', icon: Package },
@@ -31,7 +56,9 @@ const items: Item[] = [
   { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] },
   { href: '/admin/messages', label: 'Mensajes WA', icon: MessageSquare },
-  { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
+  { href: '/admin/caja', label: 'Gestión de caja', icon: Wallet, roles: ['SUPERADMIN'] },
+  { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] }
+  
 ]
 
 const ROLE_DISPLAY: Record<string, string> = {
