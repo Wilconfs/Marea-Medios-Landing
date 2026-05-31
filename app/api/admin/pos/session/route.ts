@@ -80,8 +80,13 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true, session: newSession });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error en POST /api/admin/pos/session:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    
+    // 👇 CAMBIA TEMPORALMENTE ESTA LÍNEA PARA VER EL DETALLE REAL EN PRODUCCIÓN
+    return NextResponse.json({ 
+      error: "Error en el servidor", 
+      details: error.message || String(error) 
+    }, { status: 500 });
   }
 }
