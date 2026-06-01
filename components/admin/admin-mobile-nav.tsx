@@ -7,6 +7,7 @@ import { Menu, X, LayoutDashboard, Package, Tags, ShoppingBag, MessageSquare, Us
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/auth-helpers'
+import { Wallet } from 'lucide-react'
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,6 +16,7 @@ const items = [
   { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] as UserRole[] },
   { href: '/admin/messages', label: 'Mensajes WA', icon: MessageSquare },
+  { href: '/admin/caja', label: 'Gestión de caja', icon: Wallet, roles: ['SUPERADMIN'] },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] as UserRole[] },
 ]
 

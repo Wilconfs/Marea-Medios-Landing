@@ -31,18 +31,131 @@ type CartItem = {
   quantity: number
 }
 
+// Convierte un número o string limpio a formato con puntos: "1000000" -> "1.000.000"
+export const formatMoneyDisplay = (value: string | number) => {
+  if (!value && value !== 0) return ''
+  const stringValue = typeof value === 'number' ? value.toString() : value
+  const cleanValue = stringValue.replace(/\D/g, '') // Quita todo lo que no sea número
+  return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.') // Agrega los puntos de miles
+}
+
+// Convierte el texto formateado de nuevo a número puro: "1.000.000" -> 1000000
+export const cleanMoneyValue = (value: string) => {
+  const clean = value.replace(/\D/g, '')
+  return clean ? parseInt(clean, 10) : 0
+}
+
 export default function CajaPage() {
+  const [balanceDisplay, setBalanceDisplay] = useState('0')
   const [session, setSession] = useState<ActiveSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [openingBalance, setOpeningBalance] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [processingSale, setProcessingSale] = useState(false)
+
+  // Estados para el Modal de Cierre de Caja
+  const [showCloseModal, setShowCloseModal] = useState(false)
+  const [actualBalanceDisplay, setActualBalanceDisplay] = useState('')
+  const [closingNotes, setClosingNotes] = useState('')
+  const [closingSession, setClosingSession] = useState(false)
+
+  // Ejecutar el cierre de caja final
+  async function handleCloseCaja(e: React.FormEvent) {
+    e.preventDefault()
+    const cleanValue = actualBalanceDisplay.replace(/\D/g, '')
+    const actualAmount = parseInt(cleanValue, 10)
+
+    if (isNaN(actualAmount) || actualAmount < 0) {
+      toast.error('Por favor, ingresa un valor de dinero real válido')
+      return
+    }
+
+    setClosingSession(true)
+    try {
+      const res = await fetch('/api/admin/pos/session', {
+        method: 'PUT', // 👈 Invoca el método PUT que creamos arriba
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actualBalance: actualAmount,
+          closingNotes: closingNotes.trim()
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al cerrar caja')
+
+      toast.success(data.message || 'Turno de caja cerrado con éxito.')
+      
+      // Reiniciamos todo el estado para obligar al POS a volver al formulario de apertura
+      setSession(null)
+      setCart([])
+      setShowCloseModal(false)
+      setActualBalanceDisplay('')
+      setClosingNotes('')
+    } catch (err: any) {
+      toast.error(err.message || 'No se pudo cerrar la caja')
+    } finally {
+      setClosingSession(false)
+    }
+  }
+
+const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  let rawValue = e.target.value
+
+  // 1. Quitar todo lo que no sea número
+  let cleanValue = rawValue.replace(/\D/g, '')
+
+  // 2. Si el usuario borra todo, dejamos el estado visual en '0'
+  if (cleanValue === '') {
+    setBalanceDisplay('0')
+    return
+  }
+
+  // 3. Quitar los ceros a la izquierda para evitar que se quede el "0" pegado (ej: "05" -> "5")
+  // Pero permitimos el "0" si es el único carácter digitado
+  if (cleanValue.length > 1 && cleanValue.startsWith('0')) {
+    cleanValue = String(parseInt(cleanValue, 10))
+  }
+
+  // 4. Aplicar el formateo por miles e inyectar al estado visual
+  setBalanceDisplay(formatMoneyDisplay(cleanValue))
+}
 
   // Estados del POS
   const [products, setProducts] = useState<Product[]>([])
   const [search, setSearch] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [loadingProducts, setLoadingProducts] = useState(false)
+
+  // Función para enviar la venta al servidor
+  async function handleCheckout() {
+    if (cart.length === 0) return
+
+    setProcessingSale(true)
+    try {
+      // Le pega directamente a la nueva API dedicada de venta
+      const res = await fetch('/api/admin/pos/sale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartItems: cart,
+          total: cartTotal,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || data.details || 'Error al registrar la venta')
+
+      toast.success('¡Venta registrada con éxito!')
+      setCart([])
+      loadProducts() // Refresca las tarjetas con el nuevo stock descontado
+    } catch (err: any) {
+      toast.error(err.message || 'No se pudo procesar la venta')
+    } finally {
+      setProcessingSale(false)
+    }
+  }
 
   // 1. Validar el estado de la caja al cargar la página
   async function checkSession() {
@@ -91,26 +204,58 @@ export default function CajaPage() {
     }
   }
 
+  // Cargar sesión de caja activa al entrar a la página
   useEffect(() => {
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/admin/pos/session')
+        if (res.ok) {
+          const data = await res.json()
+          
+          // 👈 Si el backend te devuelve una sesión abierta, la inyectamos al estado
+          if (data && data.session) {
+            setSession(data.session)
+            loadProducts() // Carga el catálogo de inmediato
+          } else {
+            setSession(null) // Si viene null, obligamos a ver el formulario de apertura
+          }
+        }
+      } catch (err) {
+        console.error('Error al verificar sesión de caja:', err)
+        toast.error('No se pudo verificar el estado de la caja')
+      } finally {
+        setLoading(false)
+      }
+    }
     checkSession()
   }, [])
 
   // 3. Función para abrir la caja (Dispara el POST)
   async function handleOpenCaja(e: React.FormEvent) {
     e.preventDefault()
-    const balance = parseFloat(openingBalance)
-    if (isNaN(balance) || balance < 0) {
+    
+    // 👇 LIMPIEZA CLAVE: Quitamos los puntos de miles antes de convertir a número
+    // Si estás usando la variable 'balanceDisplay' para el input, úsala aquí.
+    // Si dejaste el mismo nombre 'openingBalance', simplemente le hacemos el replace:
+    const cleanValue = openingBalance.replace(/\D/g, '') 
+    const balance = parseInt(cleanValue, 10)
+
+    // Si el campo quedó vacío, lo interpretamos como 0
+    const finalBalance = isNaN(balance) ? 0 : balance
+
+    if (finalBalance < 0) {
       toast.error('Por favor, ingresa un saldo inicial válido')
       return
     }
 
     setSubmitting(true)
     try {
-      const res = await fetch('/api/admin/pos/session', {
+      const baseUrl = window.location.origin // Aseguramos compatibilidad con el subdominio
+      const res = await fetch(`${baseUrl}/api/admin/pos/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openingBalance: balance,
+          openingBalance: finalBalance, // 👈 Le mandamos el número entero limpio (ej: 50000)
           notes: notes.trim(),
         }),
       })
@@ -215,29 +360,27 @@ export default function CajaPage() {
 
           <form onSubmit={handleOpenCaja} className="space-y-4">
             <div>
-              <Label htmlFor="openingBalance" className="text-sm font-medium">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Saldo Inicial / Base en Efectivo
-              </Label>
-              <div className="relative mt-1">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground text-sm font-semibold">
-                  $
-                </span>
-                <Input
+              </label>
+              <div className="relative rounded-xl shadow-sm">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                  <span className="text-slate-500 sm:text-sm">$</span>
+                </div>
+                <input
+                  type="text" // 👈 Cambiado a text para permitir los puntos divisores
+                  name="openingBalance"
                   id="openingBalance"
-                  type="number"
+                  value={balanceDisplay}
+                  onChange={handleBalanceChange}
+                  className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-8 pr-4 text-base text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                   placeholder="0"
-                  className="pl-7 text-lg font-medium rounded-xl"
-                  value={openingBalance}
-                  onChange={(e) => setOpeningBalance(e.target.value)}
-                  disabled={submitting}
-                  required
                 />
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs text-slate-500">
                 El dinero en efectivo disponible para dar cambio al cliente.
               </p>
             </div>
-
             <div>
               <Label htmlFor="notes" className="text-sm font-medium">
                 Notas u Observaciones (Opcional)
@@ -309,11 +452,11 @@ export default function CajaPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[calc(100vh-240px)] overflow-y-auto pr-1">
-              {filteredProducts.map((product) => {
+              {filteredProducts.map((product, index) => {
                 const outOfStock = product.stock <= 0
                 return (
                   <button
-                    key={product.id}
+                    key={`${product.id}-${index}`}
                     disabled={outOfStock}
                     onClick={() => addToCart(product)}
                     className="flex flex-col justify-between text-left p-3 rounded-xl border bg-card hover:border-slate-400 dark:hover:border-slate-500 transition-all shadow-sm group disabled:opacity-50 disabled:hover:border-border"
@@ -356,12 +499,25 @@ export default function CajaPage() {
 
         {/* 🧾 COLUMNA DERECHA: Carrito de Compras / Cobro (40% / 5 Cols) */}
         <div className="lg:col-span-5 rounded-xl border bg-card p-4 shadow-sm space-y-4 flex flex-col h-[calc(100vh-180px)] lg:sticky lg:top-4">
-          <div className="flex items-center gap-2 font-semibold text-sm border-b pb-2">
-            <ShoppingCart className="h-4 w-4 text-slate-500" />
-            <span>Resumen del Pedido</span>
-            <span className="ml-auto bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md text-xs font-bold">
-              {cart.reduce((acc, item) => acc + item.quantity, 0)} items
-            </span>
+          <div className="flex items-center justify-between border-b pb-3 mb-3">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-slate-500" />
+              <h2 className="font-bold text-sm text-slate-900 dark:text-white">Resumen del Pedido</h2>
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                {cart.length} items
+              </span>
+            </div>
+
+            {/* BOTÓN DE CIERRE INTEGRADO */}
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowCloseModal(true)}
+              className="text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg h-7 px-2"
+            >
+              <Lock className="h-3 w-3 mr-1" />
+              Cerrar Caja
+            </Button>
           </div>
 
           {/* Lista del Carrito con Scroll Independiente */}
@@ -422,17 +578,99 @@ export default function CajaPage() {
             </div>
 
             <Button
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || processingSale}
               className="w-full font-semibold rounded-xl text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
               size="lg"
-              onClick={() => toast.info('Módulo de cobro en construcción')}
+              onClick={handleCheckout}
             >
-              Registrar Venta
+              {processingSale ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Procesando cobro...
+                </>
+              ) : (
+                'Registrar Venta'
+              )}
             </Button>
           </div>
         </div>
+        
+        
 
       </div>
+
+      {/* MODAL DE ARQUEO / CIERRE DE CAJA */}
+      {showCloseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-xl dark:bg-slate-950 animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+              <Lock className="h-5 w-5 text-rose-500" />
+              Arqueo y Cierre de Turno
+            </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Cuenta el dinero en efectivo que tienes físicamente en el cajón monedero para finalizar el turno.
+            </p>
+
+            <form onSubmit={handleCloseCaja} className="space-y-4">
+              <div>
+                <Label htmlFor="actualBalance">Total Efectivo Físico en Mano</Label>
+                <div className="relative mt-1 rounded-xl shadow-sm">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <span className="text-slate-500 sm:text-sm">$</span>
+                  </div>
+                  <Input
+                    type="text"
+                    id="actualBalance"
+                    value={actualBalanceDisplay}
+                    onChange={(e) => setActualBalanceDisplay(formatMoneyDisplay(e.target.value))}
+                    className="pl-8 py-3 text-base font-bold font-mono text-slate-900 dark:text-white"
+                    placeholder="0"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="closingNotes">Novedades u Observaciones de Cierre</Label>
+                <textarea
+                  id="closingNotes"
+                  rows={3}
+                  value={closingNotes}
+                  onChange={(e) => setClosingNotes(e.target.value)}
+                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                  placeholder="Ej. Faltaron $500 pesos por una bolsa, o todo cuadró perfecto..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="flex-1 rounded-xl"
+                  onClick={() => setShowCloseModal(false)}
+                  disabled={closingSession}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={closingSession}
+                  className="flex-1 rounded-xl bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700"
+                >
+                  {closingSession ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cerrando...
+                    </>
+                  ) : (
+                    'Confirmar Cierre'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

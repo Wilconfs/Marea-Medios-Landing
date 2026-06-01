@@ -197,6 +197,8 @@ model CashSession {
   actualBalance   Float? // Lo que el cajero contó físicamente
   status          String    @default("OPEN") // OPEN, CLOSED
   notes           String?   @db.Text
+  closingNotes    String?   @db.Text
+  difference      Float?
 
   // Relaciones
   tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
