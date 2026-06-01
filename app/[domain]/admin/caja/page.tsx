@@ -32,7 +32,7 @@ type CartItem = {
 }
 
 // Convierte un número o string limpio a formato con puntos: "1000000" -> "1.000.000"
-export const formatMoneyDisplay = (value: string | number) => {
+const formatMoneyDisplay = (value: string | number) => { // 👈 LE QUITAMOS EL 'export'
   if (!value && value !== 0) return ''
   const stringValue = typeof value === 'number' ? value.toString() : value
   const cleanValue = stringValue.replace(/\D/g, '') // Quita todo lo que no sea número
