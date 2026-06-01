@@ -40,7 +40,7 @@ const formatMoneyDisplay = (value: string | number) => { // 👈 LE QUITAMOS EL 
 }
 
 // Convierte el texto formateado de nuevo a número puro: "1.000.000" -> 1000000
-export const cleanMoneyValue = (value: string) => {
+const cleanMoneyValue = (value: string) => {
   const clean = value.replace(/\D/g, '')
   return clean ? parseInt(clean, 10) : 0
 }
