@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { cartItems, total } = await request.json()
+    const { cartItems, total, discountAmount, paymentDetails } = await request.json()
 
     if (!cartItems || cartItems.length === 0) {
       return NextResponse.json({ error: 'El carrito está vacío' }, { status: 400 })
@@ -32,15 +32,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No hay ningún turno de caja abierto para registrar la venta.' }, { status: 400 })
     }
 
-    // 2. Transacción atómica para guardar venta y descontar stock
+    // Calcular los valores reales de la operación
+    const baseTotal = parseFloat(total)
+    const discount = parseFloat(discountAmount || 0)
+    const netTotal = baseTotal - discount < 0 ? 0 : baseTotal - discount
+
+    // 2. Transacción atómica para guardar venta, descontar stock y mover caja
     const result = await prisma.$transaction(async (tx) => {
       
-      // Creamos la orden usando una query directa para evitar bloqueos del linter de TS
+      // Guardamos la orden con el desglose de productos y el neto cobrado
       const order = await (tx.order as any).create({
         data: {
           tenantId,
           userId,
-          total: parseFloat(total),
+          total: netTotal,
           status: 'DELIVERED', 
           items: JSON.stringify(
             cartItems.map((item: any) => ({
@@ -75,20 +80,48 @@ export async function POST(request: Request) {
         })
       }
 
-      // Registrar el ingreso de efectivo en el turno de caja
+      // DETERMINAR CUÁNTO EFECTIVO FÍSICO INGRESÓ REALMENTE A LA CAJA
+      let cashReceived = 0
+      let movementDescription = ''
+
+      if (paymentDetails.method === 'MIXTO') {
+        cashReceived = parseFloat(paymentDetails.cashAmount || 0)
+        movementDescription = `Venta POS Mixta (Efectivo: $${cashReceived.toLocaleString('es-CO')} - Transf: $${parseFloat(paymentDetails.transferAmount).toLocaleString('es-CO')})`
+      } else if (paymentDetails.method === 'EFECTIVO') {
+        cashReceived = netTotal
+        movementDescription = `Venta POS Efectivo`
+      } else {
+        // TRANSFERENCIA PURA
+        cashReceived = 0
+        movementDescription = `Venta POS Transferencia Bancaria (No suma a efectivo)`
+      }
+
+      // Si hubo descuento, lo anexamos a la descripción para auditoría rápida
+      if (discount > 0) {
+        movementDescription += ` [Desc. aplicado: $${discount.toLocaleString('es-CO')}]`
+      }
+
+      movementDescription += ` - Orden #${order.id.slice(-6).toUpperCase()}`
+
+      // Registrar el movimiento de caja únicamente si entró dinero en efectivo físico
+      // o para dejar constancia de la venta electrónica sin afectar el balance esperado de billetes.
       const cashMovement = await tx.cashMovement.create({
         data: {
           cashSessionId: activeSession.id,
           type: 'INCOME',
-          amount: parseFloat(total),
-          description: `Venta POS - Orden #${order.id.slice(-6).toUpperCase()}`
+          amount: cashReceived, // 👈 Aquí está la magia: si es transferencia guarda 0 para no dañar tu arqueo físico
+          description: movementDescription
         }
       })
 
-      return { order, cashMovement }
+      return { order, cashMovement, netTotal }
     })
 
-    return NextResponse.json({ success: true, orderId: result.order.id })
+    return NextResponse.json({ 
+      success: true, 
+      orderId: result.order.id,
+      netTotal: result.netTotal
+    })
 
   } catch (error: any) {
     console.error('Error en POST /api/admin/pos/sale:', error)

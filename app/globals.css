@@ -2,6 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================================================================= */
+/* REGLAS EXCLUSIVAS PARA IMPRESIÓN DE COMPROBANTES POS             */
+/* ================================================================= */
+@media print {
+  /* En lugar de ocultar con visibility, usamos display estricto en la raíz */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    font-family: monospace !important;
+  }
+
+  /* Ocultamos absolutamente todo lo que esté dentro del body */
+  body > * {
+    display: none !important;
+  }
+
+  /* Forzamos a que el portal o el modal que contiene el tiquete sea lo único renderizado */
+  body > [data-overlay-container],
+  body > div[role="dialog"],
+  body > .fixed {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Escondemos los elementos del modal que son puros botones de pantalla */
+  .no-print, 
+  button, 
+  .flex.gap-2.mt-4 {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Dejamos la tirilla expandida al ancho real del papel térmico */
+  .print-area {
+    display: block !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+
+  /* Removemos márgenes por defecto de las impresoras */
+  @page {
+    margin: 0 !important;
+    size: auto;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

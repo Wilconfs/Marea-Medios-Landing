@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { Loader2, Wallet, Lock, ArrowRight, Search, ShoppingCart, ShoppingBag, Trash2, Plus, Minus } from 'lucide-react'
+import { Loader2, Wallet, Lock, Clock, ArrowRight, Search, ShoppingCart, ShoppingBag, Trash2, Plus, Minus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,11 +32,12 @@ type CartItem = {
 }
 
 // Convierte un número o string limpio a formato con puntos: "1000000" -> "1.000.000"
-const formatMoneyDisplay = (value: string | number) => { // 👈 LE QUITAMOS EL 'export'
-  if (!value && value !== 0) return ''
-  const stringValue = typeof value === 'number' ? value.toString() : value
-  const cleanValue = stringValue.replace(/\D/g, '') // Quita todo lo que no sea número
-  return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.') // Agrega los puntos de miles
+const formatMoneyDisplay = (value: string | number | undefined | null) => {
+  if (value === undefined || value === null) return '0'
+  const stringValue = value.toString()
+  const cleanValue = stringValue.replace(/\D/g, '')
+  if (cleanValue === '') return '0'
+  return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
 // Convierte el texto formateado de nuevo a número puro: "1.000.000" -> 1000000
@@ -47,6 +48,7 @@ const cleanMoneyValue = (value: string) => {
 
 export default function CajaPage() {
   const [balanceDisplay, setBalanceDisplay] = useState('0')
+  const [sessionSummary, setSessionSummary] = useState<any>(null)
   const [session, setSession] = useState<ActiveSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [openingBalance, setOpeningBalance] = useState('')
@@ -54,11 +56,70 @@ export default function CajaPage() {
   const [submitting, setSubmitting] = useState(false)
   const [processingSale, setProcessingSale] = useState(false)
 
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [orderToCancel, setOrderToCancel] = useState<any | null>(null)
+  const [salesHistory, setSalesHistory] = useState<any[]>([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+
+  // Función para consultar la API que creamos en /api/admin/pos/history
+  async function fetchTurnSales() {
+    setLoadingHistory(true)
+    try {
+      const res = await fetch('/api/admin/pos/history')
+      const data = await res.json()
+      if (res.ok) {
+        setSalesHistory(data.sales || [])
+      }
+    } catch (err) {
+      console.error("Error cargando ventas", err)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  // ==========================================
+  // ESTADOS MÓDULO POS AVANZADO
+  // ==========================================
+  const [discountInput, setDiscountInput] = useState<string>('0')
+  const [paymentMethod, setPaymentMethod] = useState<'EFECTIVO' | 'TRANSFERENCIA' | 'MIXTO'>('EFECTIVO')
+  const [mixedCash, setMixedCash] = useState<string>('0')
+  const [mixedTransfer, setMixedTransfer] = useState<string>('0')
+
+  // Estados para el Recibo de Venta (Tiquetera)
+  const [showTicketModal, setShowTicketModal] = useState(false)
+  const [lastSaleData, setLastSaleData] = useState<any>(null)
+
   // Estados para el Modal de Cierre de Caja
   const [showCloseModal, setShowCloseModal] = useState(false)
   const [actualBalanceDisplay, setActualBalanceDisplay] = useState('')
   const [closingNotes, setClosingNotes] = useState('')
   const [closingSession, setClosingSession] = useState(false)
+
+  // Estados del POS
+  const [products, setProducts] = useState<Product[]>([])
+  const [search, setSearch] = useState('')
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
+
+  // ==========================================
+  // CÁLCULOS REACTIVOS (MEMOS)
+  // ==========================================
+  // 1. Total bruto del carrito (Suma de precios base)
+  const cartTotal = useMemo(() => {
+    return cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0)
+  }, [cart])
+
+  // 2. Extrae el valor numérico puro del descuento ingresado
+  const appliedDiscount = useMemo(() => {
+    const clean = discountInput.replace(/\D/g, '')
+    return clean ? parseInt(clean, 10) : 0
+  }, [discountInput])
+
+  // 3. Total definitivo restando el descuento manual
+  const finalTotal = useMemo(() => {
+    const net = cartTotal - appliedDiscount
+    return net < 0 ? 0 : net
+  }, [cartTotal, appliedDiscount])
 
   // Ejecutar el cierre de caja final
   async function handleCloseCaja(e: React.FormEvent) {
@@ -74,7 +135,7 @@ export default function CajaPage() {
     setClosingSession(true)
     try {
       const res = await fetch('/api/admin/pos/session', {
-        method: 'PUT', // 👈 Invoca el método PUT que creamos arriba
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           actualBalance: actualAmount,
@@ -87,7 +148,6 @@ export default function CajaPage() {
 
       toast.success(data.message || 'Turno de caja cerrado con éxito.')
       
-      // Reiniciamos todo el estado para obligar al POS a volver al formulario de apertura
       setSession(null)
       setCart([])
       setShowCloseModal(false)
@@ -100,47 +160,52 @@ export default function CajaPage() {
     }
   }
 
-const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  let rawValue = e.target.value
+  const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let rawValue = e.target.value
+    let cleanValue = rawValue.replace(/\D/g, '')
 
-  // 1. Quitar todo lo que no sea número
-  let cleanValue = rawValue.replace(/\D/g, '')
+    if (cleanValue === '') {
+      setBalanceDisplay('0')
+      return
+    }
 
-  // 2. Si el usuario borra todo, dejamos el estado visual en '0'
-  if (cleanValue === '') {
-    setBalanceDisplay('0')
-    return
+    if (cleanValue.length > 1 && cleanValue.startsWith('0')) {
+      cleanValue = String(parseInt(cleanValue, 10))
+    }
+
+    setBalanceDisplay(formatMoneyDisplay(cleanValue))
   }
 
-  // 3. Quitar los ceros a la izquierda para evitar que se quede el "0" pegado (ej: "05" -> "5")
-  // Pero permitimos el "0" si es el único carácter digitado
-  if (cleanValue.length > 1 && cleanValue.startsWith('0')) {
-    cleanValue = String(parseInt(cleanValue, 10))
-  }
-
-  // 4. Aplicar el formateo por miles e inyectar al estado visual
-  setBalanceDisplay(formatMoneyDisplay(cleanValue))
-}
-
-  // Estados del POS
-  const [products, setProducts] = useState<Product[]>([])
-  const [search, setSearch] = useState('')
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [loadingProducts, setLoadingProducts] = useState(false)
-
-  // Función para enviar la venta al servidor
+  // Función para enviar la venta al servidor con lógica avanzada de pago y descuento
   async function handleCheckout() {
     if (cart.length === 0) return
 
+    // Validar coherencia en pago mixto antes de procesar
+    const cashAmt = paymentMethod === 'MIXTO' ? (parseInt(mixedCash.replace(/\D/g, '')) || 0) : 0
+    const transfAmt = paymentMethod === 'MIXTO' ? (parseInt(mixedTransfer.replace(/\D/g, '')) || 0) : 0
+    
+    if (paymentMethod === 'MIXTO' && (cashAmt + transfAmt !== finalTotal)) {
+      toast.error(`La suma de Efectivo ($${formatMoneyDisplay(cashAmt)}) y Transferencia ($${formatMoneyDisplay(transfAmt)}) debe ser igual al total neto ($${formatMoneyDisplay(finalTotal)}).`)
+      return
+    }
+
     setProcessingSale(true)
+
+    const paymentDetails = {
+      method: paymentMethod,
+      cashAmount: cashAmt,
+      transferAmount: transfAmt
+    }
+
     try {
-      // Le pega directamente a la nueva API dedicada de venta
       const res = await fetch('/api/admin/pos/sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cartItems: cart,
           total: cartTotal,
+          discountAmount: appliedDiscount,
+          paymentDetails
         }),
       })
 
@@ -148,8 +213,28 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!res.ok) throw new Error(data.error || data.details || 'Error al registrar la venta')
 
       toast.success('¡Venta registrada con éxito!')
+
+      // Guardamos la información exacta incluyendo descuento y método para el tiquete
+      setLastSaleData({
+        orderNumber: data.order?.number || `POS-${data.orderId ? data.orderId.slice(-6).toUpperCase() : Date.now().toString().slice(-6).toUpperCase()}`,
+        date: new Date(),
+        items: [...cart],
+        total: cartTotal,
+        discount: appliedDiscount,
+        netTotal: finalTotal,
+        paymentMethod: paymentMethod,
+        paymentDetails: paymentDetails
+      })
+      
+      setShowTicketModal(true)
+
+      // Vaciamos estados del POS
       setCart([])
-      loadProducts() // Refresca las tarjetas con el nuevo stock descontado
+      setDiscountInput('0')
+      setPaymentMethod('EFECTIVO')
+      setMixedCash('0')
+      setMixedTransfer('0')
+      loadProducts() 
     } catch (err: any) {
       toast.error(err.message || 'No se pudo procesar la venta')
     } finally {
@@ -157,14 +242,10 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     }
   }
 
-  // 1. Validar el estado de la caja al cargar la página
+  // Validar el estado de la caja al cargar la página
   async function checkSession() {
     try {
-      // Usamos la ruta directa a la API global
       const res = await fetch('/api/admin/pos/session')
-      
-      // Si el middleware te está devolviendo un HTML (por ejemplo, si te redirige),
-      // res.ok puede ser true, pero el contenido no es un JSON. Validamos el tipo:
       const contentType = res.headers.get('content-type')
       if (!contentType || !contentType.includes('application/json')) {
         console.error('La API devolvió HTML en vez de JSON. Revisa el ruteo del middleware.')
@@ -187,14 +268,13 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     }
   }
 
-  // 2. Cargar productos disponibles para la venta
+  // Cargar productos disponibles para la venta
   async function loadProducts() {
     setLoadingProducts(true)
     try {
       const res = await fetch('/api/admin/products')
       if (res.ok) {
         const data = await res.json()
-        // Filtrar solo productos activos si es necesario
         setProducts(Array.isArray(data) ? data.filter((p: any) => p.isActive) : [])
       }
     } catch (err) {
@@ -211,13 +291,11 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const res = await fetch('/api/admin/pos/session')
         if (res.ok) {
           const data = await res.json()
-          
-          // 👈 Si el backend te devuelve una sesión abierta, la inyectamos al estado
           if (data && data.session) {
             setSession(data.session)
-            loadProducts() // Carga el catálogo de inmediato
+            loadProducts()
           } else {
-            setSession(null) // Si viene null, obligamos a ver el formulario de apertura
+            setSession(null)
           }
         }
       } catch (err) {
@@ -230,17 +308,12 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     checkSession()
   }, [])
 
-  // 3. Función para abrir la caja (Dispara el POST)
+  // Función para abrir la caja (Dispara el POST)
   async function handleOpenCaja(e: React.FormEvent) {
     e.preventDefault()
     
-    // 👇 LIMPIEZA CLAVE: Quitamos los puntos de miles antes de convertir a número
-    // Si estás usando la variable 'balanceDisplay' para el input, úsala aquí.
-    // Si dejaste el mismo nombre 'openingBalance', simplemente le hacemos el replace:
     const cleanValue = openingBalance.replace(/\D/g, '') 
     const balance = parseInt(cleanValue, 10)
-
-    // Si el campo quedó vacío, lo interpretamos como 0
     const finalBalance = isNaN(balance) ? 0 : balance
 
     if (finalBalance < 0) {
@@ -250,12 +323,12 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 
     setSubmitting(true)
     try {
-      const baseUrl = window.location.origin // Aseguramos compatibilidad con el subdominio
+      const baseUrl = window.location.origin
       const res = await fetch(`${baseUrl}/api/admin/pos/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          openingBalance: finalBalance, // 👈 Le mandamos el número entero limpio (ej: 50000)
+          openingBalance: finalBalance,
           notes: notes.trim(),
         }),
       })
@@ -278,7 +351,7 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     }
   }
 
-  // 4. Lógica del Carrito de Compras
+  // Lógica del Carrito de Compras
   const addToCart = (product: Product) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id)
@@ -328,11 +401,6 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     )
   }, [products, search])
 
-  // Cálculo del total actual de la venta
-  const cartTotal = useMemo(() => {
-    return cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0)
-  }, [cart])
-
   if (loading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
@@ -341,9 +409,6 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     )
   }
 
-  // -----------------------------------------------------------------
-  // ESCENARIO A: LA CAJA ESTÁ CERRADA -> FORMULARIO EN GRISES LIMPIOS
-  // -----------------------------------------------------------------
   if (!session) {
     return (
       <div className="mx-auto max-w-md py-12">
@@ -368,14 +433,22 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                   <span className="text-slate-500 sm:text-sm">$</span>
                 </div>
                 <input
-                  type="text" // 👈 Cambiado a text para permitir los puntos divisores
+                  type="text"
                   name="openingBalance"
                   id="openingBalance"
-                  value={balanceDisplay}
-                  onChange={handleBalanceChange}
+                  value={openingBalance}
+                  onChange={(e) => {
+                    // Limpiamos lo que el usuario escribe para que solo sean números
+                    const rawValue = e.target.value.replace(/\D/g, '');
+                    // Formateamos visualmente con puntos
+                    const formatted = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    // Actualizamos el estado
+                    setOpeningBalance(formatted);
+                  }}
                   className="block w-full rounded-xl border border-slate-300 bg-white py-3 pl-8 pr-4 text-base text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                   placeholder="0"
                 />
+
               </div>
               <p className="mt-1 text-xs text-slate-500">
                 El dinero en efectivo disponible para dar cambio al cliente.
@@ -410,10 +483,7 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       </div>
     )
   }
-
-  // -----------------------------------------------------------------
-  // ESCENARIO B: LA CAJA ESTÁ ABIERTA -> REJILLA DE VENTAS REAL (POS)
-  // -----------------------------------------------------------------
+  
   return (
     <div className="space-y-5 h-full">
       {/* Encabezado Superior */}
@@ -424,17 +494,28 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             Operador: <span className="font-medium text-foreground">{session.user?.name}</span> • Abierto el {new Date(session.openedAt).toLocaleDateString()}
           </p>
         </div>
-        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="rounded-xl flex items-center gap-2"
+          onClick={() => {
+            fetchTurnSales()
+            setShowHistoryModal(true)
+          }}
+        >
+          <Clock className="h-4 w-4" />
+          Ventas del Turno
+        </Button>
         <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-1.5 text-xs font-semibold shadow-sm text-slate-700 dark:text-slate-300">
           <Wallet className="h-4 w-4 text-slate-500" />
           <span>Base Inicial: {formatPrice(session.openingBalance)}</span>
         </div>
       </div>
 
-      {/* Malla del POS de Dos Columnas (Escritorio) */}
+      {/* Malla del POS de Dos Columnas */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         
-        {/* 🛒 COLUMNA IZQUIERDA: Catálogo de Productos (60% / 7 Cols) */}
+        {/* COLUMNA IZQUIERDA: Catálogo */}
         <div className="lg:col-span-7 space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -497,9 +578,9 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           )}
         </div>
 
-        {/* 🧾 COLUMNA DERECHA: Carrito de Compras / Cobro (40% / 5 Cols) */}
+        {/* COLUMNA DERECHA: Carrito de Compras / Cobro Avanzado */}
         <div className="lg:col-span-5 rounded-xl border bg-card p-4 shadow-sm space-y-4 flex flex-col h-[calc(100vh-180px)] lg:sticky lg:top-4">
-          <div className="flex items-center justify-between border-b pb-3 mb-3">
+          <div className="flex items-center justify-between border-b pb-3 mb-3 shrink-0">
             <div className="flex items-center gap-2">
               <ShoppingCart className="h-4 w-4 text-slate-500" />
               <h2 className="font-bold text-sm text-slate-900 dark:text-white">Resumen del Pedido</h2>
@@ -507,20 +588,37 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 {cart.length} items
               </span>
             </div>
+            <Button
+  variant="ghost"
+  size="sm"
+  onClick={async () => {
+    try {
+      // 1. Llamamos al backend para obtener el resumen real
+      const res = await fetch(`/api/admin/pos/session?t=${Date.now()}`)
+      const data = await res.json()
+      
+      console.log("DEBUG: Respuesta del Backend:", data); // <--- MIRA ESTO EN LA CONSOLA (F12)
 
-            {/* BOTÓN DE CIERRE INTEGRADO */}
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => setShowCloseModal(true)}
-              className="text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 rounded-lg h-7 px-2"
-            >
-              <Lock className="h-3 w-3 mr-1" />
-              Cerrar Caja
-            </Button>
+      if (res.ok && data.summary) {
+        // 2. Seteamos los estados con los datos reales
+        setSessionSummary(data.summary) 
+        if (data.session) setSession(data.session)
+        setShowCloseModal(true)
+      } else {
+        toast.error(data.error || "No se pudo obtener el resumen")
+      }
+    } catch (err) {
+      toast.error("Error al conectar con el servidor")
+    }
+  }}
+  className="..."
+>
+  <Lock className="h-3 w-3 mr-1" />
+  Cerrar Caja
+</Button>
           </div>
 
-          {/* Lista del Carrito con Scroll Independiente */}
+          {/* Lista del Carrito */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-1">
             {cart.map((item) => (
               <div key={item.product.id} className="flex items-center gap-3 p-2 rounded-xl border bg-muted/30 text-sm group">
@@ -531,7 +629,6 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                   </p>
                 </div>
 
-                {/* Controles de cantidad */}
                 <div className="flex items-center border rounded-lg bg-card overflow-hidden shrink-0">
                   <button
                     type="button"
@@ -563,18 +660,114 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground py-12">
                 <ShoppingBag className="h-8 w-8 text-slate-300 mb-2" />
                 <p className="text-xs">El carrito está vacío.</p>
-                <p className="text-[11px] text-muted-foreground max-w-[180px] mt-0.5">Haz clic en un producto del catálogo para agregarlo.</p>
+                <p className="text-[11px] text-muted-foreground max-w-[180px] mt-0.5">Haz clic en un producto para agregarlo.</p>
               </div>
             )}
           </div>
 
-          {/* Desglose y Botón de Acción Principal */}
-          <div className="border-t pt-4 space-y-3 bg-card mt-auto">
-            <div className="flex items-center justify-between text-base font-bold">
-              <span>Total a Cobrar:</span>
-              <span className="font-mono text-xl text-slate-900 dark:text-white">
-                {formatPrice(cartTotal)}
-              </span>
+          {/* DESGLOSE AVANZADO: DESCUENTOS Y MÉTODOS DE PAGO MÚLTIPLES */}
+          <div className="border-t pt-3 space-y-3 bg-card mt-auto shrink-0">
+            
+            {/* Input de Descuento Manual */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold uppercase text-amber-600 tracking-wider flex justify-between">
+                <span>¿Aplicar Descuento Manual?</span>
+                {appliedDiscount > 0 && <span>-{formatPrice(appliedDiscount)}</span>}
+              </label>
+              <div className="relative rounded-lg shadow-sm">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <span className="text-slate-400 text-xs">$</span>
+                </div>
+                <Input
+                  type="text"
+                  value={discountInput === '0' ? '' : discountInput}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/\D/g, '')
+                    setDiscountInput(clean ? formatMoneyDisplay(clean) : '0')
+                  }}
+                  placeholder="Monto de rebaja (Ej. 5.000)"
+                  className="pl-6 h-8 text-xs font-mono rounded-lg border-amber-200 focus:border-amber-500 focus:ring-amber-500"
+                  disabled={cart.length === 0}
+                />
+              </div>
+            </div>
+
+            {/* Selector de Método de Pago */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-bold uppercase text-muted-foreground tracking-wider block">
+                Método de Pago
+              </label>
+              <div className="grid grid-cols-3 gap-1.5">
+                {(['EFECTIVO', 'TRANSFERENCIA', 'MIXTO'] as const).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentMethod(method)}
+                    disabled={cart.length === 0}
+                    className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all border ${
+                      paymentMethod === method
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-muted/50 text-slate-600 hover:bg-muted border-transparent'
+                    }`}
+                  >
+                    {method}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Inputs dinámicos si el pago es Mixto */}
+            {paymentMethod === 'MIXTO' && (
+              <div className="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded-xl border border-dashed dark:bg-slate-900">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">A Efectivo</span>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
+                    <Input
+                      type="text"
+                      value={mixedCash === '0' ? '' : mixedCash}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '')
+                        setMixedCash(clean ? formatMoneyDisplay(clean) : '0')
+                      }}
+                      className="pl-5 h-7 text-xs font-mono bg-white rounded-lg"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase">A Transf.</span>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] text-slate-400">$</span>
+                    <Input
+                      type="text"
+                      value={mixedTransfer === '0' ? '' : mixedTransfer}
+                      onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '')
+                        setMixedTransfer(clean ? formatMoneyDisplay(clean) : '0')
+                      }}
+                      className="pl-5 h-7 text-xs font-mono bg-white rounded-lg"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Resumen de Totales Finales */}
+            <div className="space-y-0.5 pt-1 border-t border-dashed">
+              {appliedDiscount > 0 && (
+                <div className="flex items-center justify-between text-xs text-muted-foreground font-mono">
+                  <span>Subtotal Compra:</span>
+                  <span>{formatPrice(cartTotal)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-sm font-bold">
+                <span>Total Neto:</span>
+                <span className="font-mono text-xl text-slate-900 dark:text-white">
+                  {formatPrice(finalTotal)}
+                </span>
+              </div>
             </div>
 
             <Button
@@ -594,83 +787,434 @@ const handleBalanceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             </Button>
           </div>
         </div>
-        
-        
-
       </div>
 
       {/* MODAL DE ARQUEO / CIERRE DE CAJA */}
       {showCloseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-xl dark:bg-slate-950 animate-in fade-in zoom-in-95 duration-150">
+          <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-xl dark:bg-slate-950 context-modal">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">
               <Lock className="h-5 w-5 text-rose-500" />
-              Arqueo y Cierre de Turno
+              Control de caja y Cierre de Turno
             </h3>
             <p className="text-xs text-slate-500 mb-4">
-              Cuenta el dinero en efectivo que tienes físicamente en el cajón monedero para finalizar el turno.
+              Revisa las cuentas automáticas del sistema y cuenta el dinero físico en el cajón monedero.
             </p>
 
-            <form onSubmit={handleCloseCaja} className="space-y-4">
-              <div>
-                <Label htmlFor="actualBalance">Total Efectivo Físico en Mano</Label>
-                <div className="relative mt-1 rounded-xl shadow-sm">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                    <span className="text-slate-500 sm:text-sm">$</span>
-                  </div>
-                  <Input
-                    type="text"
-                    id="actualBalance"
-                    value={actualBalanceDisplay}
-                    onChange={(e) => setActualBalanceDisplay(formatMoneyDisplay(e.target.value))}
-                    className="pl-8 py-3 text-base font-bold font-mono text-slate-900 dark:text-white"
-                    placeholder="0"
-                    required
-                  />
+            {/* DETALLE MATEMÁTICO DEL TURNO (AQUÍ SE INYECTA LA SOLUCIÓN) */}
+            {sessionSummary && (
+              <div className="mb-4 space-y-2.5 rounded-xl bg-slate-50 p-4 dark:bg-slate-900 text-xs border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Monto Base de Apertura:</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    {/* Forzamos el 0 si no existe */}
+                    ${formatMoneyDisplay(sessionSummary?.openingBalance ?? 0)}
+                  </span>
                 </div>
-              </div>
+          <div className="flex justify-between items-center">
+            <span className="text-slate-500">Ventas Realizadas ({sessionSummary.completedCount}):</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+              + ${formatMoneyDisplay(sessionSummary.totalSales)}
+            </span>
+          </div>
+          {/* Modifica esta parte en tu page.tsx */}
+          <div className="flex justify-between items-center border-b pb-2 border-slate-200 dark:border-slate-800">
+            <span className="text-slate-500">
+              Gastos Reales:
+            </span>
+            <span className="font-semibold text-red-500">
+              - ${formatMoneyDisplay(sessionSummary.totalGastosReales)}
+            </span>
+          </div>
 
-              <div>
-                <Label htmlFor="closingNotes">Novedades u Observaciones de Cierre</Label>
-                <textarea
-                  id="closingNotes"
-                  rows={3}
-                  value={closingNotes}
-                  onChange={(e) => setClosingNotes(e.target.value)}
-                  className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
-                  placeholder="Ej. Faltaron $500 pesos por una bolsa, o todo cuadró perfecto..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  className="flex-1 rounded-xl"
-                  onClick={() => setShowCloseModal(false)}
-                  disabled={closingSession}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={closingSession}
-                  className="flex-1 rounded-xl bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700"
-                >
-                  {closingSession ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Cerrando...
-                    </>
-                  ) : (
-                    'Confirmar Cierre'
-                  )}
-                </Button>
-              </div>
-            </form>
+          {/* Agrega esta línea nueva si quieres mostrar la info de las anulaciones */}
+          <div className="flex justify-between items-center text-[10px] text-slate-400">
+            <span>(Anulaciones informativas: ${formatMoneyDisplay(sessionSummary.totalAnulaciones)})</span>
+          </div>
+          
+          <div className="flex justify-between items-center pt-1.5 text-sm font-bold text-slate-900 dark:text-white">
+            <span>Efectivo Esperado en Caja:</span>
+            <span className="text-blue-600 dark:text-blue-400">
+              ${formatMoneyDisplay(sessionSummary.expectedCashInHand)}
+            </span>
           </div>
         </div>
       )}
+
+      <form onSubmit={handleCloseCaja} className="space-y-4">
+        <div>
+          <Label htmlFor="actualBalance">Total Efectivo Físico en Mano</Label>
+          <div className="relative mt-1 rounded-xl shadow-sm">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+              <span className="text-slate-500 sm:text-sm">$</span>
+            </div>
+            <Input
+              type="text"
+              id="actualBalance"
+              value={actualBalanceDisplay}
+              onChange={(e) => setActualBalanceDisplay(formatMoneyDisplay(e.target.value))}
+              className="pl-8 py-3 text-base font-bold font-mono text-slate-900 dark:text-white"
+              placeholder="0"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="closingNotes">Novedades u Observaciones de Cierre</Label>
+          <textarea
+            id="closingNotes"
+            rows={3}
+            value={closingNotes}
+            onChange={(e) => setClosingNotes(e.target.value)}
+            className="mt-1 block w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+            placeholder="Ej. Faltaron $500 pesos por una bolsa, o todo cuadró perfecto..."
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button 
+            type="button" 
+            variant="ghost" 
+            className="flex-1 rounded-xl text-xs h-9"
+            onClick={() => setShowCloseModal(false)}
+            disabled={closingSession}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={closingSession}
+            className="flex-1 rounded-xl text-xs h-9 bg-rose-600 text-white hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-700 font-semibold"
+          >
+            {closingSession ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cerrando...
+              </>
+            ) : (
+              'Confirmar Cierre'
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  </div>
+)}
+
+      {/* MODAL DE RECIBO DE VENTA (VOUCHER POS CON SOPORTE AVANZADO) */}
+      {showTicketModal && lastSaleData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 no-print">
+          <div className="w-full max-w-sm rounded-2xl border bg-white p-5 shadow-2xl dark:bg-slate-950">
+            
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 text-center">
+              🎉 ¡Venta Procesada Exitosamente!
+            </h3>
+
+            <div className="border border-slate-200 rounded-xl p-4 bg-slate-50 overflow-y-auto max-h-[50vh] dark:bg-slate-900/40 dark:border-slate-800">              
+              <div 
+                id="pos-ticket-print" 
+                className="print-area bg-white text-black p-2 font-mono text-xs space-y-3 leading-tight"
+                style={{ color: '#000000', backgroundColor: '#ffffff' }}
+              >
+                {/* ENCABEZADO */}
+                <div className="text-center space-y-0.5">
+                  <h2 className="text-sm font-bold tracking-wider uppercase text-black">TIENDA MAREA</h2>
+                  <p className="text-[10px] text-zinc-600">Gestión General • POS</p>
+                  <p className="text-[10px] text-slate-600">Bogotá, Colombia</p>
+                </div>
+
+                <div className="border-b border-dashed border-black/40 my-2" />
+
+                {/* METADATOS */}
+                <div className="space-y-0.5 text-[11px]">
+                  <p><span className="font-bold">Factura:</span> #{lastSaleData.orderNumber}</p>
+                  <p><span className="font-bold">Fecha:</span> {lastSaleData.date.toLocaleString('es-CO')}</p>
+                  <p><span className="font-bold">Cajero:</span> {session?.user?.name || 'Super Admin'}</p>
+                </div>
+
+                <div className="border-b border-dashed border-black/40 my-2" />
+
+                {/* PRODUCTOS */}
+                <div className="space-y-1">
+                  <div className="flex justify-between font-bold text-[11px]">
+                    <span>Cant / Producto</span>
+                    <span>Total</span>
+                  </div>
+                  {lastSaleData.items?.map((item: any) => (
+                    <div key={item.product.id} className="flex justify-between items-start text-[11px]">
+                      <span className="max-w-[70%]">
+                        {item.quantity}x {item.product.name}
+                      </span>
+                      <span>
+                        ${formatMoneyDisplay(item.product.price * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-b border-dashed border-black/40 my-2" />
+
+                {/* TOTALES AVANZADOS */}
+                <div className="space-y-1 text-[11px]">
+                  {lastSaleData.discount > 0 && (
+                    <div className="flex justify-between text-zinc-700">
+                      <span>Subtotal Base:</span>
+                      <span>${formatMoneyDisplay(lastSaleData.total)}</span>
+                    </div>
+                  )}
+                  {lastSaleData.discount > 0 && (
+                    <div className="flex justify-between font-bold text-amber-700">
+                      <span>Descuento Manual:</span>
+                      <span>-${formatMoneyDisplay(lastSaleData.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-extrabold text-sm pt-1">
+                    <span>TOTAL COBRADO:</span>
+                    <span>${formatMoneyDisplay(lastSaleData.netTotal ?? lastSaleData.total)}</span>
+                  </div>
+                </div>
+
+                <div className="border-b border-dashed border-black/40 my-2" />
+
+                {/* DETALLE MÉTODO DE PAGO */}
+                <div className="text-[11px] space-y-0.5">
+                  <p><span className="font-bold">Método de Pago:</span> {lastSaleData.paymentMethod}</p>
+                  {lastSaleData.paymentMethod === 'MIXTO' && (
+                    <div className="pl-2 text-[10px] text-zinc-600">
+                      <p>• Efectivo: ${formatMoneyDisplay(lastSaleData.paymentDetails?.cashAmount)}</p>
+                      <p>• Transf: ${formatMoneyDisplay(lastSaleData.paymentDetails?.transferAmount)}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-b border-dashed border-black/40 my-2" />
+
+                {/* PIE DE PÁGINA */}
+                <div className="text-center pt-1 text-[10px] space-y-0.5">
+                  <p className="font-bold">¡Gracias por tu compra!</p>
+                  <p className="text-slate-500">tienda1.local</p>
+                </div>
+
+              </div>
+            </div>
+
+            {/* ACCIONES */}
+            <div className="flex gap-2 mt-4">
+              <Button
+                variant="ghost"
+                className="flex-1 rounded-xl text-xs"
+                onClick={() => setShowTicketModal(false)}
+              >
+                Cerrar
+              </Button>
+              <Button
+                type="button"
+                className="flex-1 rounded-xl text-xs bg-slate-900 text-white hover:bg-slate-800 font-semibold"
+                onClick={() => {
+                  const ticketHtml = document.getElementById('pos-ticket-print')?.innerHTML
+                  if (ticketHtml) {
+                    const printWindow = window.open('', '_blank')
+                    if (printWindow) {
+                      printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                          <head>
+                            <title>Imprimir Factura #${lastSaleData?.orderNumber}</title>
+                            <style>
+                              html, body {
+                                margin: 0;
+                                padding: 0;
+                                background-color: #ffffff;
+                                color: #000000;
+                                font-family: 'Courier New', Courier, monospace;
+                                -webkit-print-color-adjust: exact;
+                                print-color-adjust: exact;
+                              }
+                              .ticket-wrapper {
+                                width: 72mm;
+                                margin: 0 auto;
+                                padding-top: 30px;
+                                padding-bottom: 20px;
+                                padding-left: 6px;
+                                padding-right: 6px;
+                                box-sizing: border-box;
+                              }
+                              .text-center { text-align: center; }
+                              .uppercase { text-transform: uppercase; }
+                              .font-bold { font-weight: bold; }
+                              .font-extrabold { font-weight: 800; }
+                              .text-sm { font-size: 14px; }
+                              .text-xs { font-size: 12px; }
+                              .text-[10px] { font-size: 10px; }
+                              .text-[11px] { font-size: 11px; }
+                              .text-zinc-600, .text-slate-600 { color: #404040; }
+                              .border-b { border-bottom: 1px solid #000000; }
+                              .border-dashed { border-style: dashed; }
+                              .my-2 { margin-top: 8px; margin-bottom: 8px; }
+                              .pt-1 { padding-top: 4px; }
+                              .flex { display: flex; }
+                              .justify-between { justify-content: space-between; }
+                              .items-start { align-items: flex-start; }
+                              .leading-tight { line-height: 1.3; }
+                              .max-w-[70%] { max-width: 70%; }
+                              .pl-2 { padding-left: 8px; }
+                              @media print {
+                                @page { margin: 0; size: auto; }
+                                body { background: #ffffff; }
+                                .ticket-wrapper { width: 72mm; padding-top: 30px !important; }
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="ticket-wrapper">
+                              ${ticketHtml}
+                            </div>
+                            <script>
+                              window.onload = function() {
+                                window.print();
+                                setTimeout(() => { window.close(); }, 100);
+                              };
+                            </script>
+                          </body>
+                        </html>
+                      `)
+                      printWindow.document.close()
+                    }
+                  } else {
+                    toast.error('No se encontró el contenedor de la factura')
+                  }
+                }}
+              >
+                🖨️ Imprimir
+              </Button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
+    <div className="w-full max-w-2xl rounded-2xl border bg-white p-6 shadow-xl dark:bg-slate-950 max-h-[80vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-4 border-b pb-3">
+        <h3 className="text-base font-bold">Ventas Realizadas en este Turno</h3>
+        <Button variant="ghost" size="sm" onClick={() => setShowHistoryModal(false)}>Cerrar</Button>
+      </div>
+
+      {loadingHistory ? (
+        <p className="text-sm text-center py-6 text-slate-500">Cargando facturas...</p>
+      ) : salesHistory.length === 0 ? (
+        <p className="text-sm text-center py-6 text-slate-500">No has realizado ventas en este turno todavía.</p>
+      ) : (
+        <div className="space-y-3">
+          {salesHistory.map((sale) => (
+            <div key={sale.id} className="p-3 border rounded-xl flex justify-between items-center bg-slate-50/50">
+              <div>
+                <p className="text-xs font-bold text-slate-950">Factura #POS-{sale.id.slice(-6).toUpperCase()}</p>
+                <p className="text-[10px] text-slate-500">{new Date(sale.createdAt).toLocaleTimeString('es-CO')}</p>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  sale.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {sale.status === 'CANCELLED' ? 'Anulada' : 'Completada'}
+                </span>
+              </div>
+              
+              <div className="text-right flex items-center gap-4">
+                <div>
+                  <p className="font-mono text-xs font-bold">${new Intl.NumberFormat('es-CO').format(sale.total)}</p>
+                  <p className="text-[10px] uppercase text-slate-400 font-medium">{sale.paymentMethod}</p>
+                </div>
+
+                {sale.status !== 'CANCELLED' && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="h-7 text-xs rounded-lg"
+                  onClick={() => setOrderToCancel(sale)}
+                >
+                  Anular
+                </Button>
+              )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}
+{orderToCancel && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/55 backdrop-blur-sm p-4">
+    <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-2xl dark:bg-slate-950 text-center sm:text-left">
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+        ¿Seguro que deseas ANULAR esta factura?
+      </h3>
+      <p className="text-sm text-slate-500 mt-2">
+        Se devolverán los productos al stock y se restará el efectivo de la caja. Esta acción no se puede deshacer.
+      </p>
+
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+        <Button 
+          type="button" 
+          variant="outline" 
+          className="rounded-xl px-4 text-xs font-semibold"
+          onClick={() => setOrderToCancel(null)}
+        >
+          Cancelar
+        </Button>
+        <Button 
+          type="button" 
+          className="rounded-xl bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 px-4 text-xs font-semibold"
+          onClick={async () => {
+            try {
+              const res = await fetch('/api/admin/pos/history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: orderToCancel.id })
+              })
+              
+              const data = await res.json()
+              if (!res.ok) throw new Error(data.error || 'Error al anular')
+
+              toast.success("Factura anulada con éxito e inventario restaurado.")
+              setOrderToCancel(null) // Cerrar confirmación
+              
+              // 1. Refresca la lista de facturas del modal
+              await fetchTurnSales() 
+
+              // 2. ¡SOLUCIÓN! Actualizar el stock en el estado local inmediatamente
+              if (orderToCancel && Array.isArray(orderToCancel.items)) {
+                setProducts((prevProducts: any[]) => {
+                  return prevProducts.map((product) => {
+                    // Buscamos si este producto estaba en la orden que se anuló
+                    const cancelledItem = orderToCancel.items.find(
+                      (item: any) => (item.productId || item.id) === product.id
+                    )
+
+                    if (cancelledItem) {
+                      // Devolvemos la cantidad sumándola al stock actual
+                      return {
+                        ...product,
+                        stock: (product.stock || 0) + Number(cancelledItem.quantity)
+                      }
+                    }
+                    return product
+                  })
+                })
+              }
+
+            } catch (err: any) {
+              toast.error(err.message || "No se pudo anular la factura")
+            }
+          }}
+        >
+          Anular Factura
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }

@@ -80,7 +80,6 @@ export function AdminTopbar({
               {/* Botón Ver Tienda */}
               <a
                 href="/"
-                target="_blank"
                 rel="noreferrer"
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                 onClick={() => setDropdownOpen(false)}
