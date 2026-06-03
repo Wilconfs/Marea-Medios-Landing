@@ -823,15 +823,15 @@ export default function CajaPage() {
               Gastos Reales:
             </span>
             <span className="font-semibold text-red-500">
-              - ${formatMoneyDisplay(sessionSummary.totalGastosReales)}
+              - ${formatMoneyDisplay(sessionSummary.totalAnulaciones)}
             </span>
           </div>
 
-          {/* Agrega esta línea nueva si quieres mostrar la info de las anulaciones */}
+          {/* Agrega esta línea nueva si quieres mostrar la info de las anulaciones 
           <div className="flex justify-between items-center text-[10px] text-slate-400">
             <span>(Anulaciones informativas: ${formatMoneyDisplay(sessionSummary.totalAnulaciones)})</span>
           </div>
-          
+          */}
           <div className="flex justify-between items-center pt-1.5 text-sm font-bold text-slate-900 dark:text-white">
             <span>Efectivo Esperado en Caja:</span>
             <span className="text-blue-600 dark:text-blue-400">

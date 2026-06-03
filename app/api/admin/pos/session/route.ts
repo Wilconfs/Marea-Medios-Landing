@@ -37,16 +37,10 @@ export async function GET(request: Request) {
     // En tu ruta de API (GET o PUT)
 const totalExpenses = movements
   .filter(m => {
-    const isExpense = m.type === 'EXPENSE';
-    // Imprimir para depurar en consola
-    console.log("Evaluando movimiento:", m.type, m.description, "Es EXPENSE:", isExpense);
-    
-    // CAMBIO AQUÍ: Probemos si solo excluyendo la palabra "ANULACIÓN" funciona.
-    // Si la descripción es "ANULACIÓN Factura...", esto debería ser true.
-    const isAnulacion = m.description && m.description.toUpperCase().includes('ANULACIÓN');
-    
-    // Queremos sumar gastos, pero NO anulaciones
-    return isExpense && !isAnulacion;
+    const isExpense = (m.type as string) === 'EXPENSE';
+    // Convertimos a MAYÚSCULAS para que siempre coincida con 'ANULACIÓN'
+    const isAnulacion = (m.description as string)?.toUpperCase().includes('ANULACIÓN');
+    return isExpense && !isAnulacion; 
   })
   .reduce((sum, m) => sum + Number(m.amount || 0), 0);
 
@@ -63,16 +57,29 @@ const totalExpenses = movements
       expectedCashInHand 
     });
 
+const totalAnulaciones = movements
+  .filter(m => (m.description as string)?.toUpperCase().includes('ANULACIÓN'))
+  .reduce((sum, m) => sum + Number(m.amount || 0), 0);
+
+    // 2. Modifica el return para incluir la nueva variable
     return NextResponse.json({ 
       session: activeSession,
-      movements: movements, // <--- Envía la lista completa aquí
-  summary: { totalSales, totalExpenses, expectedCashInHand, openingBalance }
-    })
+      movements: movements,
+      summary: { 
+        totalSales, 
+        totalExpenses,       // Gastos reales (sin anulaciones)
+        totalAnulaciones,    // NUEVO: Para mostrar en la modal
+        expectedCashInHand, 
+        openingBalance 
+      } 
+    });
   } catch (error) {
     console.error("Error en GET:", error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
+  
 }
+
 
 // POST: Apertura de caja (sin cambios)
 export async function POST(request: Request) {
@@ -137,16 +144,10 @@ export async function PUT(request: Request) {
    // En tu ruta de API (GET o PUT)
 const totalExpenses = movements
   .filter(m => {
-    const isExpense = m.type === 'EXPENSE';
-    // Imprimir para depurar en consola
-    console.log("Evaluando movimiento:", m.type, m.description, "Es EXPENSE:", isExpense);
-    
-    // CAMBIO AQUÍ: Probemos si solo excluyendo la palabra "ANULACIÓN" funciona.
-    // Si la descripción es "ANULACIÓN Factura...", esto debería ser true.
-    const isAnulacion = m.description && m.description.toUpperCase().includes('ANULACIÓN');
-    
-    // Queremos sumar gastos, pero NO anulaciones
-    return isExpense && !isAnulacion;
+    const isExpense = (m.type as string) === 'EXPENSE';
+    // Convertimos a MAYÚSCULAS para que siempre coincida con 'ANULACIÓN'
+    const isAnulacion = (m.description as string)?.toUpperCase().includes('ANULACIÓN');
+    return isExpense && !isAnulacion; 
   })
   .reduce((sum, m) => sum + Number(m.amount || 0), 0);
 
