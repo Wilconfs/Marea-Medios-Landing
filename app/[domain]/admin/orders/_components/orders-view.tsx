@@ -75,6 +75,44 @@ export function OrdersView() {
     load()
   }, [])
 
+  function MobileOrderCard({ order, onNotify }: { order: Order; onNotify: (o: Order) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  return (
+    <div className="border rounded-lg p-4 mb-3 bg-card shadow-sm">
+      <div className="flex justify-between items-center" onClick={() => setIsOpen(!isOpen)}>
+        <div>
+          <p className="font-mono font-bold">#{order.id.slice(-8).toUpperCase()}</p>
+          <p className="text-sm font-medium">{order.customerName ?? order.user?.name ?? 'Invitado'}</p>
+        </div>
+        <div className="flex items-center gap-2">
+           <span className={cn('text-[10px] px-2 py-1 rounded-full', STATUS_COLOR[order.status])}>
+             {STATUS_LABEL[order.status]}
+           </span>
+        </div>
+      </div>
+      
+      {isOpen && (
+        <div className="mt-4 pt-4 border-t space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Fecha:</span>
+            <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Total:</span>
+            <span className="font-bold">{formatPrice(order.total)}</span>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button size="sm" variant="outline" className="flex-1" onClick={() => onNotify(order)}>Notificar</Button>
+            <Button asChild size="sm" className="flex-1"><Link href={`/admin/orders/${order.id}`}>Ver</Link></Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
   // 👇 FUNCIÓN LÓGICA DE NOTIFICACIÓN DE WHATSAPP AÑADIDA
   const handleWhatsappNotification = async (order: Order) => {
     try {
@@ -196,84 +234,64 @@ export function OrdersView() {
             <p className="text-sm text-muted-foreground">No hay pedidos.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 text-left">Pedido</th>
-                  <th className="px-4 py-3 text-left">Cliente</th>
-                  <th className="px-4 py-3 text-left">Fecha</th>
-                  <th className="px-4 py-3 text-right">Items</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3 text-center">Estado</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((o) => {
-                  const items = Array.isArray(o.items) ? o.items : []
-                  return (
-                    <tr key={o.id} className="border-b last:border-0 hover:bg-secondary/30">
-                      <td className="px-4 py-3 font-mono text-xs">
-                        #{o.id.slice(-8).toUpperCase()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium">
-                          {o.customerName ?? o.user?.name ?? 'Invitado'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {o.user?.email ?? o.customerPhone ?? '—'}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {new Date(o.createdAt).toLocaleDateString('es-CO', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono">
-                        {items.reduce((s, it) => s + (it.quantity ?? 0), 0)}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono font-semibold">
-                        {formatPrice(o.total)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={cn(
-                            'inline-block rounded-full px-2.5 py-1 text-xs font-semibold',
-                            STATUS_COLOR[o.status],
-                          )}
-                        >
-                          {STATUS_LABEL[o.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* 👇 BOTÓN DE ACCIÓN RÁPIDA WHATSAPP AÑADIDO */}
-                            {/* Deja el renderizado libre para todos los estados */}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleWhatsappNotification(o)}
-                                className="bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 rounded-xl gap-1 border-green-200"
-                              >
-                                <MessageSquare className="h-3.5 w-3.5" />
-                                Notificar
-                              </Button>
-                          <Button asChild size="sm" variant="outline" className="rounded-xl">
-                            <Link href={`/admin/orders/${o.id}`}>
-                              <Eye className="mr-1.5 h-3.5 w-3.5" />
-                              Ver
-                            </Link>
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div>
+            {/* 1. LISTA PARA MÓVIL: Oculta en escritorio, visible en móvil */}
+            <div className="sm:hidden p-3">
+              {filtered.map((o) => (
+                <MobileOrderCard key={o.id} order={o} onNotify={handleWhatsappNotification} />
+              ))}
+            </div>
+
+            {/* 2. TABLA ESCRITORIO: Oculta en móvil, visible en escritorio */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Pedido</th>
+                    <th className="px-4 py-3 text-left">Cliente</th>
+                    <th className="px-4 py-3 text-left">Fecha</th>
+                    <th className="px-4 py-3 text-right">Items</th>
+                    <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3 text-center">Estado</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((o) => {
+                    const items = Array.isArray(o.items) ? o.items : []
+                    return (
+                      <tr key={o.id} className="border-b last:border-0 hover:bg-secondary/30">
+                        <td className="px-4 py-3 font-mono text-xs">#{o.id.slice(-8).toUpperCase()}</td>
+                        <td className="px-4 py-3">
+                          <p className="font-medium">{o.customerName ?? o.user?.name ?? 'Invitado'}</p>
+                          <p className="text-xs text-muted-foreground">{o.user?.email ?? o.customerPhone ?? '—'}</p>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {new Date(o.createdAt).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">{items.reduce((s, it) => s + (it.quantity ?? 0), 0)}</td>
+                        <td className="px-4 py-3 text-right font-mono font-semibold">{formatPrice(o.total)}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={cn('inline-block rounded-full px-2.5 py-1 text-xs font-semibold', STATUS_COLOR[o.status])}>
+                            {STATUS_LABEL[o.status]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleWhatsappNotification(o)} className="bg-green-500/10 text-green-600 hover:bg-green-500/20 hover:text-green-700 rounded-xl gap-1 border-green-200">
+                              <MessageSquare className="h-3.5 w-3.5" /> Notificar
+                            </Button>
+                            <Button asChild size="sm" variant="outline" className="rounded-xl">
+                              <Link href={`/admin/orders/${o.id}`}><Eye className="mr-1.5 h-3.5 w-3.5" /> Ver</Link>
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

@@ -77,9 +77,7 @@ const totalAnulaciones = movements
     console.error("Error en GET:", error)
     return NextResponse.json({ error: 'Error interno' }, { status: 500 })
   }
-  
 }
-
 
 // POST: Apertura de caja (sin cambios)
 export async function POST(request: Request) {

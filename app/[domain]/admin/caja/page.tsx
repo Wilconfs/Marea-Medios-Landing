@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatPrice } from '@/lib/format'
+import CashMetrics from "@/components/CashMetrics";
 
 type ActiveSession = {
   id: string
@@ -47,6 +48,11 @@ const cleanMoneyValue = (value: string) => {
 }
 
 export default function CajaPage() {
+  const [stats, setStats] = useState<{
+  totalSales: number;
+  totalExpenses: number;
+  closedSessionsCount: number;
+} | null>(null);
   const [balanceDisplay, setBalanceDisplay] = useState('0')
   const [sessionSummary, setSessionSummary] = useState<any>(null)
   const [session, setSession] = useState<ActiveSession | null>(null)
@@ -60,6 +66,8 @@ export default function CajaPage() {
   const [orderToCancel, setOrderToCancel] = useState<any | null>(null)
   const [salesHistory, setSalesHistory] = useState<any[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+
+  
 
   // Función para consultar la API que creamos en /api/admin/pos/history
   async function fetchTurnSales() {
@@ -213,6 +221,8 @@ export default function CajaPage() {
       if (!res.ok) throw new Error(data.error || data.details || 'Error al registrar la venta')
 
       toast.success('¡Venta registrada con éxito!')
+      await fetchTurnSales(); // Tu función actual
+      await fetchStats();     // <--- ¡AQUÍ AGREGAS ESTO!
 
       // Guardamos la información exacta incluyendo descuento y método para el tiquete
       setLastSaleData({
@@ -306,7 +316,26 @@ export default function CajaPage() {
       }
     }
     checkSession()
+    async function fetchStats() {
+    const res = await fetch('/api/admin/pos/stats');
+    const data = await res.json();
+    setStats(data); // <--- Esto es lo que alimenta el componente
+  }
+  fetchStats();
   }, [])
+
+  const fetchStats = async () => {
+  try {
+    const res = await fetch('/api/admin/pos/stats');
+    if (res.ok) {
+      const data = await res.json();
+      setStats(data);
+    }
+  } catch (error) {
+    console.error("Error al actualizar métricas:", error);
+  }
+};
+
 
   // Función para abrir la caja (Dispara el POST)
   async function handleOpenCaja(e: React.FormEvent) {
@@ -485,7 +514,10 @@ export default function CajaPage() {
   }
   
   return (
-    <div className="space-y-5 h-full">
+    <div className="space-y-5 h-full">      
+      {/* 2. INSERTA ESTO AQUÍ: */}
+      {stats && <CashMetrics stats={stats} />}
+
       {/* Encabezado Superior */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
@@ -494,7 +526,9 @@ export default function CajaPage() {
             Operador: <span className="font-medium text-foreground">{session.user?.name}</span> • Abierto el {new Date(session.openedAt).toLocaleDateString()}
           </p>
         </div>
-        <Button 
+        
+        <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-1.5 text-xs font-semibold shadow-sm text-slate-700 dark:text-slate-300">
+          <Button 
           variant="outline" 
           size="sm" 
           className="rounded-xl flex items-center gap-2"
@@ -506,7 +540,6 @@ export default function CajaPage() {
           <Clock className="h-4 w-4" />
           Ventas del Turno
         </Button>
-        <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-1.5 text-xs font-semibold shadow-sm text-slate-700 dark:text-slate-300">
           <Wallet className="h-4 w-4 text-slate-500" />
           <span>Base Inicial: {formatPrice(session.openingBalance)}</span>
         </div>
@@ -1178,6 +1211,8 @@ export default function CajaPage() {
               if (!res.ok) throw new Error(data.error || 'Error al anular')
 
               toast.success("Factura anulada con éxito e inventario restaurado.")
+              await fetchTurnSales();
+            await fetchStats(); // <--- ¡AQUÍ TAMBIÉN!
               setOrderToCancel(null) // Cerrar confirmación
               
               // 1. Refresca la lista de facturas del modal

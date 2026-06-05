@@ -60,13 +60,14 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // Relaciones
-  users        User[]
-  categories   Category[]
-  products     Product[]
-  orders       Order[]
-  settings     Setting[]
-  modules      TenantModule[]
-  cashSessions CashSession[]
+  users         User[]
+  categories    Category[]
+  products      Product[]
+  orders        Order[]
+  settings      Setting[]
+  modules       TenantModule[]
+  cashSessions  CashSession[]
+  cashMovements CashMovement[] // Agrega esta línea
 }
 
 model User {
@@ -214,14 +215,16 @@ model CashSession {
 
 model CashMovement {
   id            String   @id @default(uuid())
+  tenantId      String?  // <--- Marca esto como opcional para que la migración pase
   cashSessionId String
-  type          String // INCOME (Ingreso), EXPENSE (Egreso), SALE (Venta POS)
+  type          String
   amount        Float
   description   String
   createdAt     DateTime @default(now())
-
+  
   // Relaciones
-  session CashSession @relation(fields: [cashSessionId], references: [id], onDelete: Cascade)
+  session       CashSession @relation(fields: [cashSessionId], references: [id])
+  tenant        Tenant?     @relation(fields: [tenantId], references: [id], onDelete: Cascade) 
 
-  @@index([cashSessionId])
+  @@index([tenantId])
 }

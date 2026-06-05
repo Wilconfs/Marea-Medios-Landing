@@ -8,6 +8,7 @@ import { useCart } from '@/lib/cart-store'
 import { formatPrice } from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { ShoppingBag } from 'lucide-react'
 
 interface Product {
   id: string

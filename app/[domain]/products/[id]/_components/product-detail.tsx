@@ -232,7 +232,7 @@ export function ProductDetail({ product }: { product: Product }) {
           ) : null}
         </div>
 
-        <p className="text-sm leading-relaxed text-slate-500">
+        <p className="text-sm leading-relaxed text-slate-500 whitespace-pre-line">
           {product?.description ?? ''}
         </p>
 

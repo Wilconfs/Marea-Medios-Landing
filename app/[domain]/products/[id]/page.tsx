@@ -52,7 +52,7 @@ export default async function ProductPage({
         <Link href="/" className="hover:text-primary">Inicio</Link>
         <ChevronRight className="h-4 w-4" />
         <Link
-          href={`/?category=${product.category?.slug ?? ''}`}
+          href={`/category/${product.category?.slug ?? ''}`} // CAMBIA ESTO
           className="hover:text-primary"
         >
           {product.category?.name ?? ''}
