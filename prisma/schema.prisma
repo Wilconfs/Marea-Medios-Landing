@@ -20,7 +20,7 @@ enum Role {
 model Module {
   id          String         @id @default(uuid())
   code        String         @unique
-  name        String 
+  name        String
   description String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -46,51 +46,54 @@ model TenantModule {
 // 3. Empresas registradas en el CRM
 model Tenant {
   id        String   @id @default(cuid())
-  name      String 
-  slug      String   @unique 
+  name      String
+  slug      String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relaciones Administrativas
-  users     User[]
-  settings  Setting[]
-  modules   TenantModule[]
+  users    User[]
+  settings Setting[]
+  modules  TenantModule[]
 
   // Relaciones CRM
-  contacts  Contact[]
-  deals     Deal[]
+  contacts     Contact[]
+  deals        Deal[]
+  tasks        Task[]
+  contentPosts ContentPost[]
 }
 
 // 4. Usuarios (Staff de la empresa o administradores globales)
 model User {
-  id           String   @id @default(cuid())
+  id           String @id @default(cuid())
   name         String
-  email        String   @unique
-  phone        String   @default("")
+  email        String @unique
+  phone        String @default("")
   passwordHash String
-  role         Role     @default(AUXILIAR) // Ajustado a AUXILIAR por defecto para staff
+  role         Role   @default(AUXILIAR) // Ajustado a AUXILIAR por defecto para staff
 
-  tenantId     String?
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Interacciones del usuario en el CRM
-  deals        Deal[]   @relation("UserDeals")
-  notes        Note[]
+  deals Deal[] @relation("UserDeals")
+  notes Note[]
+  tasks Task[] @relation("UserTasks")
 
   @@index([tenantId])
 }
 
 // 5. Configuraciones por negocio
 model Setting {
-  id        String  @id @default(cuid())
-  key       String 
-  value     String
+  id    String @id @default(cuid())
+  key   String
+  value String
 
-  tenantId  String?
-  tenant    Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -104,10 +107,10 @@ model Setting {
 // ==========================================
 
 enum ContactStatus {
-  LEAD        // Prospecto inicial
-  QUALIFIED   // Prospecto calificado
-  CUSTOMER    // Cliente actual
-  LOST        // Oportunidad perdida
+  LEAD // Prospecto inicial
+  QUALIFIED // Prospecto calificado
+  CUSTOMER // Cliente actual
+  LOST // Oportunidad perdida
 }
 
 // 6. Agenda de Contactos / Clientes
@@ -117,17 +120,18 @@ model Contact {
   lastName  String?
   email     String?
   phone     String?
-  company   String?       // Si es B2B
+  company   String? // Si es B2B
   status    ContactStatus @default(LEAD)
-  
-  tenantId  String
-  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  deals     Deal[]
-  notes     Note[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deals Deal[]
+  notes Note[]
+  tasks Task[]
 
   @@index([tenantId])
 }
@@ -142,22 +146,22 @@ enum DealStage {
 
 // 7. Oportunidades / Embudo de Ventas
 model Deal {
-  id          String    @id @default(cuid())
-  title       String    // Ej: "Renovación contrato 2026"
-  value       Float     @default(0) // Valor monetario del negocio
-  stage       DealStage @default(PROSPECTING)
-  
-  contactId   String
-  contact     Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  id    String    @id @default(cuid())
+  title String // Ej: "Renovación contrato 2026"
+  value Float     @default(0) // Valor monetario del negocio
+  stage DealStage @default(PROSPECTING)
+
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
   assignedToId String?
-  assignedTo   User?     @relation("UserDeals", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedTo   User?   @relation("UserDeals", fields: [assignedToId], references: [id], onDelete: SetNull)
 
-  tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tenantId])
   @@index([contactId])
@@ -166,18 +170,66 @@ model Deal {
 
 // 8. Notas / Historial de actividad (Llamadas, reuniones, correos)
 model Note {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  
-  contactId String
-  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  content String @db.Text
 
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([contactId])
   @@index([authorId])
+}
+
+// 9. Tareas de seguimiento (Agenda)
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  status      String    @default("PENDING")
+  priority    String    @default("MEDIUM")
+  dueDate     DateTime?
+
+  // Relaciones
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId String? // Opcional: El usuario asignado
+  user   User?   @relation("UserTasks", fields: [userId], references: [id], onDelete: SetNull)
+
+  contactId String? // Opcional: Relacionada a un cliente
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([contactId])
+}
+
+// 10. Gestión de contenido
+model ContentPost {
+  id String @id @default(cuid())
+  // ... campos anteriores
+
+  // Nuevos campos para analítica
+  remoteId           String? // ID único que te da Meta/TikTok
+  likes              Int     @default(0)
+  views              Int     @default(0)
+  shares             Int     @default(0)
+  cloudinaryPublicId String?
+
+  // Log de estados
+  status      String    @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHED, ERROR
+  publishedAt DateTime?
+
+  // Relación con el tenant
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }

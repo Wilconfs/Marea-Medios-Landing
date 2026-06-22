@@ -2,8 +2,8 @@
 import { isModuleActive } from "@/lib/modules";
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { Film } from 'lucide-react'
 // 1. Importa el icono arriba si no lo tienes:
-import { Wallet } from 'lucide-react'
 import { 
   LayoutDashboard, 
   Users, 
@@ -56,6 +56,7 @@ const items = [
   { href: '/admin/tareas', label: 'Tareas', icon: ListTodo },
   { href: '/admin/mensajes', label: 'Mensajes WA', icon: MessageSquare },
   { href: '/admin/equipo', label: 'Equipo', icon: UserCog, roles: ['SUPERADMIN'] },
+  { href: '/admin/contenido', label: 'Contenido', icon: Film, roles: ['SUPERADMIN'] },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
 ]
 

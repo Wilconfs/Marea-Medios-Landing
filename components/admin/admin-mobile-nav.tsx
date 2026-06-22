@@ -3,20 +3,33 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, LayoutDashboard, Package, Tags, ShoppingBag, MessageSquare, Users, Settings, Store, LogOut, Wallet } from 'lucide-react'
+import { 
+  LayoutDashboard, 
+  Menu,
+  X,
+  Users, 
+  Briefcase, 
+  ListTodo, 
+  MessageSquare, 
+  UserCog, 
+  Settings, 
+  LogOut, 
+  Store 
+} from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import type { UserRole } from '@/lib/auth-helpers'
+import { Film } from 'lucide-react'
 
 const items = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/products', label: 'Productos', icon: Package },
-  { href: '/admin/categories', label: 'Categorías', icon: Tags },
-  { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] as UserRole[] },
-  { href: '/admin/messages', label: 'Mensajes WA', icon: MessageSquare },
-  { href: '/admin/caja', label: 'Gestión de caja', icon: Wallet, roles: ['SUPERADMIN'] },
-  { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] as UserRole[] },
+  { href: '/admin/contactos', label: 'Contactos', icon: Users },
+  { href: '/admin/oportunidades', label: 'Oportunidades', icon: Briefcase },
+  { href: '/admin/tareas', label: 'Tareas', icon: ListTodo },
+  { href: '/admin/mensajes', label: 'Mensajes WA', icon: MessageSquare },
+  { href: '/admin/equipo', label: 'Equipo', icon: UserCog, roles: ['SUPERADMIN'] },
+  { href: '/admin/contenido', label: 'Contenido', icon: Film, roles: ['SUPERADMIN'] },
+  { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
 ]
 
 export function AdminMobileNav({ role }: { role: UserRole }) {
