@@ -14,15 +14,15 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
-  title: 'Tienda Marea - Tu tienda de moda online',
-  description: 'Descubre las mejores ofertas en moda. Camisetas, chaquetas, jeans, bolsos y zapatos con envío rápido.',
+  title: 'CRM Marea Medios',
+  description: 'CRM Marea Medios, gestión de clientes',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
   },
   openGraph: {
-    title: 'Tienda Marea - Tu tienda virtual',
-    description: '¡Los mejores productos con precios imperdibles.',
+    title: 'CRM Marea Medios',
+    description: 'CRM Marea Medios, gestión de clientes',
     images: ['/og-image.png'],
     type: 'website',
   },

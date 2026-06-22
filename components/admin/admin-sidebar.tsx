@@ -4,16 +4,16 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 // 1. Importa el icono arriba si no lo tienes:
 import { Wallet } from 'lucide-react'
-import {
-  LayoutDashboard,
-  Package,
-  Tags,
-  ShoppingBag,
-  MessageSquare,
-  Users,
-  Settings,
-  Store,
-  LogOut,
+import { 
+  LayoutDashboard, 
+  Users, 
+  Briefcase, 
+  ListTodo, 
+  MessageSquare, 
+  UserCog, 
+  Settings, 
+  LogOut, 
+  Store 
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -49,16 +49,14 @@ export async function SidebarAdmin({ tenantId }: { tenantId: string }) {
   );
 }
 
-const items: Item[] = [
+const items = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/products', label: 'Productos', icon: Package },
-  { href: '/admin/categories', label: 'Categorías', icon: Tags },
-  { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
-  { href: '/admin/users', label: 'Usuarios', icon: Users, roles: ['SUPERADMIN', 'ADMIN'] },
-  { href: '/admin/messages', label: 'Mensajes WA', icon: MessageSquare },
-  { href: '/admin/caja', label: 'Gestión de caja', icon: Wallet, roles: ['SUPERADMIN'] },
-  { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] }
-  
+  { href: '/admin/contactos', label: 'Contactos', icon: Users },
+  { href: '/admin/oportunidades', label: 'Oportunidades', icon: Briefcase },
+  { href: '/admin/tareas', label: 'Tareas', icon: ListTodo },
+  { href: '/admin/mensajes', label: 'Mensajes WA', icon: MessageSquare },
+  { href: '/admin/equipo', label: 'Equipo', icon: UserCog, roles: ['SUPERADMIN'] },
+  { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
 ]
 
 const ROLE_DISPLAY: Record<string, string> = {
@@ -77,37 +75,55 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname()
   const visible = items.filter((it) => !it.roles || it.roles.includes(role))
+  const isSuper = role === 'SUPERADMIN'
 
   return (
     <aside
-      className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-slate-600/20 bg-slate-700 text-slate-100 lg:flex"
+      className={cn(
+        "sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r lg:flex transition-colors duration-200",
+        isSuper 
+          ? "border-slate-800 bg-slate-950 text-slate-100" // 💡 Azul marino profundo y calmado para ti
+          : "border-zinc-200 bg-white text-zinc-900"
+      )}
       style={{ boxShadow: 'var(--shadow-sm)' }}
     >
-      {/* Logo Container con fondo sutilmente oscurecido */}
-      <div className="flex h-16 items-center gap-2 border-b border-slate-600/30 px-6 bg-slate-800/30">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm">
+      {/* Logo Container */}
+      <div className={cn(
+        "flex h-16 items-center gap-2 border-b px-6",
+        isSuper ? "border-slate-800/60 bg-slate-900/30" : "border-zinc-100 bg-zinc-50/50"
+      )}>
+        <span className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-xl shadow-sm",
+          isSuper ? "bg-slate-800 text-blue-400" : "bg-blue-600 text-white"
+        )}>
           <LayoutDashboard className="h-5 w-5" />
         </span>
-        <span className="font-display text-lg font-bold tracking-tight text-white">Tienda Marea</span>
+        <span className={cn("font-display text-lg font-bold tracking-tight", isSuper ? "text-slate-100" : "text-zinc-900")}>
+          {isSuper ? "CRM Marea" : "CRM Marea"}
+        </span>
       </div>
 
       {/* Perfil del Operador */}
-      <div className="border-b border-slate-600/30 px-6 py-4 bg-slate-800/15">
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-300/80">
+      <div className={cn(
+        "border-b px-6 py-4",
+        isSuper ? "border-slate-800/60 bg-slate-900/10" : "border-zinc-100 bg-zinc-50/30"
+      )}>
+        <p className={cn("text-[11px] font-bold uppercase tracking-widest", isSuper ? "text-slate-400" : "text-zinc-500")}>
           {ROLE_DISPLAY[role] ?? role}
         </p>
-        <p className="mt-0.5 truncate text-sm font-semibold text-white">{userName}</p>
+        <p className={cn("mt-0.5 truncate text-sm font-semibold", isSuper ? "text-slate-200" : "text-zinc-800")}>
+          {userName}
+        </p>
       </div>
 
       {/* Enlaces de Navegación */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-widest text-slate-400/60">
+        <p className={cn("mb-2 px-3 text-[11px] font-bold uppercase tracking-widest", isSuper ? "text-slate-500" : "text-zinc-400")}>
           Menú
         </p>
         <ul className="space-y-1">
           {visible.map(({ href, label, icon: Icon }) => {
-            const active =
-              href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
+            const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
             return (
               <li key={href}>
                 <Link
@@ -115,11 +131,20 @@ export function AdminSidebar({
                   className={cn(
                     'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
                     active
-                      ? 'bg-white text-slate-800 font-semibold shadow-md shadow-slate-900/10'
-                      : 'text-slate-200 hover:bg-white/10 hover:text-white',
+                      ? isSuper
+                        ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-900/30' // 💡 Resalta en azul vibrante pero balanceado
+                        : 'bg-blue-50 text-blue-600 font-semibold'
+                      : isSuper
+                        ? 'text-slate-400 hover:bg-slate-900 hover:text-slate-100'
+                        : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900',
                   )}
                 >
-                  <Icon className={cn("h-4 w-4", active ? "text-slate-800" : "text-slate-300/80")} />
+                  <Icon className={cn(
+                    "h-4 w-4", 
+                    active 
+                      ? "text-white" 
+                      : isSuper ? "text-slate-500" : "text-zinc-400"
+                  )} />
                   <span>{label}</span>
                 </Link>
               </li>
@@ -129,18 +154,16 @@ export function AdminSidebar({
       </nav>
 
       {/* Acciones Inferiores */}
-      <div className="border-t border-slate-600/30 p-3 bg-slate-800/30">
-        <Link
-          href="/"
-          className="mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <Store className="h-4 w-4 text-slate-300/80" />
-          <span>Ver tienda</span>
-        </Link>
+      <div className={cn("border-t p-3", isSuper ? "border-slate-800 bg-slate-900/20" : "border-zinc-100 bg-zinc-50/50")}>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: '/' })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-200 transition-colors hover:bg-red-500/20 hover:text-red-200"
+          className={cn(
+            "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+            isSuper 
+              ? "text-slate-400 hover:bg-rose-950/20 hover:text-rose-400" 
+              : "text-zinc-600 hover:bg-red-50 hover:text-red-600"
+          )}
         >
           <LogOut className="h-4 w-4" />
           <span>Cerrar sesión</span>

@@ -20,7 +20,7 @@ export function RegisterForm() {
   const hostname = typeof window !== 'undefined' ? window.location.host : ''
   const cleanSlug = hostname.split(':')[0].split('.')[0]
 
-  console.log("✈️ Enviando registro para el Tenant Slug:", cleanSlug)
+  //console.log("✈️ Enviando registro para el Tenant Slug:", cleanSlug)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

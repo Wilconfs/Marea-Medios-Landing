@@ -22,7 +22,6 @@ export async function GET() {
       phone: true, 
       role: true,
       createdAt: true,
-      _count: { select: { orders: true } },
     },
   })
 
