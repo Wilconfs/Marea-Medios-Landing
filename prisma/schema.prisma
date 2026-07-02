@@ -225,6 +225,10 @@ model Task {
 // 10. Gestión de contenido
 model ContentPost {
   id                 String    @id @default(cuid())
+  title              String    // <--- CAMPO RECUPERADO
+  description        String?   // <--- CAMPO RECUPERADO
+  videoUrl           String    // <--- CAMPO RECUPERADO
+  platform           String    // <--- CAMPO RECUPERADO (Ej: "TIKTOK", "META")
   remoteId           String?
   likes              Int       @default(0)
   views              Int       @default(0)
