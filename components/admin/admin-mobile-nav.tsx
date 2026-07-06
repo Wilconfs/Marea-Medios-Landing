@@ -14,7 +14,8 @@ import {
   UserCog, 
   Settings, 
   LogOut, 
-  Store 
+  Store,
+  Newspaper
 } from 'lucide-react'
 import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ const items = [
   { href: '/admin/mensajes', label: 'Mensajes WA', icon: MessageSquare },
   { href: '/admin/equipo', label: 'Equipo', icon: UserCog, roles: ['SUPERADMIN'] },
   { href: '/admin/contenido', label: 'Contenido', icon: Film, roles: ['SUPERADMIN'] },
+  { href: '/admin/blog', label: 'Blog', icon: Newspaper, roles: ['SUPERADMIN'] },
   { href: '/admin/settings', label: 'Configuración', icon: Settings, roles: ['SUPERADMIN'] },
 ]
 

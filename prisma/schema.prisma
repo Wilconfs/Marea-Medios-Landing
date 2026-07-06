@@ -61,7 +61,7 @@ model Tenant {
   deals        Deal[]
   tasks        Task[]
   contentPosts ContentPost[]
-  categories   Category[]    // <--- RELACIÓN RESTAURADA
+  categories   Category[]    
 }
 
 // 4. Usuarios (Staff de la empresa o administradores globales)
@@ -83,6 +83,7 @@ model User {
   deals         Deal[] @relation("UserDeals")
   notes         Note[]
   tasksAssigned Task[] @relation("TaskAssignee")
+  blogPosts     BlogPost[] 
 
   @@index([tenantId])
 }
@@ -207,7 +208,6 @@ model Task {
   status      TaskStatus   @default(PENDING)
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?
-  
   assignedToId String?
   assignedTo   User?       @relation("TaskAssignee", fields: [assignedToId], references: [id])
 
@@ -225,7 +225,7 @@ model Task {
 model ContentPost {
   id                 String    @id @default(cuid())
   title              String    
-  description        String?   
+  description        String?
   videoUrl           String    
   platform           String    
   remoteId           String?
@@ -233,15 +233,17 @@ model ContentPost {
   views              Int       @default(0)
   shares             Int       @default(0)
   cloudinaryPublicId String?
-  
   status             String    @default("DRAFT")
   publishedAt        DateTime?
-  
   tenantId           String
   tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
-// 11. Categorías (Módulo Catálogo/Tienda)
+// ==========================================
+// SISTEMA DE BLOG Y TAXONOMÍA UNIFICADA
+// ==========================================
+
+// 11. Categorías (Unificadas para Tienda y Blog)
 model Category {
   id          String   @id @default(cuid())
   name        String
@@ -251,8 +253,52 @@ model Category {
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   
+  // Relación con el Blog
+  blogPosts   BlogPost[] 
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([tenantId])
+}
+
+// 12. Etiquetas / Tags (Compatible con MySQL)
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  
+  // Relación de muchos a muchos con los posts
+  posts       BlogPost[] 
+  
+  createdAt   DateTime @default(now())
+}
+
+// 13. Entradas de Blog Actualizadas
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique // URL amigable (ej: mi-primer-articulo)
+  excerpt     String?  @db.Text 
+  content     String   @db.Text // El contenido completo HTML
+  coverImage  String?  // URL de Cloudinary
+  status      String   @default("DRAFT") // DRAFT o PUBLISHED
+  views       Int      @default(0)
+  
+  // Relaciones
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Relación con etiquetas (Prisma crea la tabla puente en MySQL automáticamente)
+  tags        Tag[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([authorId])
 }

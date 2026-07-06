@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Open+Sans:wght@300;400;500;600;700&display=swap');
 
 /* ================================================================= */
 /* REGLAS EXCLUSIVAS PARA IMPRESIÓN DE COMPROBANTES POS             */
@@ -186,5 +187,89 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: hsl(var(--muted-foreground) / 0.3);
     border-radius: 4px;
+  }
+
+  .font-anton {
+    font-family: 'Anton', sans-serif !important;
+  }
+  .font-opensans {
+    font-family: 'Open Sans', sans-serif !important;
+  }
+}
+
+@layer components {
+  .nav-link {
+    color: #fff;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-family: 'Open Sans', sans-serif;
+    font-size: .875rem;
+    font-weight: 600;
+    text-decoration: none;
+    position: relative;
+    transition: color .2s;
+  }
+  .nav-link:after {
+    content: "";
+    background-color: #ffde59;
+    width: 0;
+    height: 2px;
+    transition: width .3s;
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+  }
+  .nav-link:hover { color: #ffde59; }
+  .nav-link:hover:after { width: 100%; }
+
+  .btn-primary {
+    color: #000;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    background-color: #ffde59;
+    border: 2px solid #ffde59;
+    align-items: center;
+    gap: .5rem;
+    padding: .875rem 2rem;
+    font-family: 'Anton', sans-serif;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all .25s;
+    display: inline-flex;
+  }
+  .btn-primary:hover { color: #ffde59; background-color: #000; }
+
+  .btn-outline {
+    color: #ffde59;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    background-color: transparent;
+    border: 2px solid #ffde59;
+    align-items: center;
+    gap: .5rem;
+    padding: .875rem 2rem;
+    font-family: 'Anton', sans-serif;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all .25s;
+    display: inline-flex;
+  }
+  .btn-outline:hover { color: #000; background-color: #ffde59; }
+  
+  .float-anim {
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+  @keyframes marquee {
+    0% { transform: translate(0); }
+    100% { transform: translate(-50%); }
+  }
+  .marquee-track {
+    white-space: nowrap;
+    animation: marquee 20s linear infinite;
+    display: flex;
   }
 }

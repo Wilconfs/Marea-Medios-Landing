@@ -17,12 +17,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 👇 2. REDIRECCIÓN POR DEFECTO AL LOGIN
-  // Si el usuario entra a la raíz ("/") lo mandamos de inmediato a "/login"
-  if (path === '/') {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
   // Dominios raíz
   const rootDomains = ['localhost', 'mareamedios.com']
   const isRootDomain = rootDomains.some(domain => hostname === domain)
