@@ -54,7 +54,9 @@ const ReelCard = ({ reel, index }: { reel: any, index: number }) => {
       <video
         ref={videoRef}
         src={reel.mp4}
+        autoPlay
         loop
+        muted
         playsInline
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
