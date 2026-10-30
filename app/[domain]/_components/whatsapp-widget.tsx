@@ -12,7 +12,7 @@ export function WhatsAppWidget() {
   })
   const [chatMsg, setChatMsg] = useState('Hola Marea Medios, estoy interesad@ en recibir más información sobre sus servicios de marketing y contenido digital.')
 
-  const numeroAgenciaWhatsApp = "573044444261" 
+  const numeroAgenciaWhatsApp = "573024467328" 
 
   // Intercepta clics en cualquier botón de "Agendar" en toda la página
   useEffect(() => {
@@ -61,7 +61,7 @@ export function WhatsAppWidget() {
   const handleChatSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!chatMsg.trim()) return;
-    const msjEstructurado = `⚡ *SOPORTE - MAREA MEDIOS* ⚡\n\n💬 *Mensaje:* ${chatMsg}\n\n_En breve recibirás respuesta de nosotros, ¡Gracias por escribirnos!._`
+    const msjEstructurado = `⚡ *SOPORTE - MAREA MEDIOS* ⚡\n\n💬 *Mensaje:* ${chatMsg}\n\nEn breve recibirás respuesta de nosotros, ¡Gracias por escribirnos!.`
     window.open(`https://wa.me/${numeroAgenciaWhatsApp}?text=${encodeURIComponent(msjEstructurado)}`, '_blank')
     setIsChatOpen(false)
   }

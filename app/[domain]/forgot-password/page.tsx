@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
               <Input
                 id="identifier"
                 type="text"
-                placeholder="ejemplo@marea.com o 3044444261"
+                placeholder="ejemplo@marea.com o 3012345678"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 required

@@ -14,15 +14,15 @@ export const dynamic = 'force-dynamic'
 
 export const metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? 'http://localhost:3000'),
-  title: 'CRM Marea Medios',
-  description: 'CRM Marea Medios, gestión de clientes',
+  title: 'Marea Medios',
+  description: 'Marea Medios, gestión de clientes',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
   },
   openGraph: {
-    title: 'CRM Marea Medios',
-    description: 'CRM Marea Medios, gestión de clientes',
+    title: 'Marea Medios',
+    description: 'Marea Medios, gestión de clientes',
     images: ['/og-image.png'],
     type: 'website',
   },
