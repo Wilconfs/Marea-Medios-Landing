@@ -17,8 +17,8 @@ export const metadata = {
   title: 'Marea Medios',
   description: 'Marea Medios, gestión de clientes',
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
+    icon: '/logosvg.svg',
+    shortcut: '/logosvg.svg',
   },
   openGraph: {
     title: 'Marea Medios',

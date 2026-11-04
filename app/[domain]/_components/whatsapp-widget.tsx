@@ -23,7 +23,8 @@ export function WhatsAppWidget() {
         if (
           text.includes("AGENDA") || text.includes("MENSAJE") ||
           text.includes("EMPEZAR AHORA") || text.includes("CONTACTANOS") ||
-          text.includes("EL MÁS POPULAR") || text.includes("QUIERO EL PREMIUM")
+          text.includes("EL MÁS POPULAR") || text.includes("QUIERO EL PREMIUM") ||
+          text.includes("CONTACTAR VENTAS") // <-- AGREGADA ESTA LÍNEA
         ) {
           // 👇 EXCEPCIÓN AGREGADA AQUÍ (submit-agenda)
           if (target.id === "widget-toggle" || target.id === "widget-send" || target.id === "close-modal" || target.id === "submit-agenda") return;

@@ -272,12 +272,15 @@ export default function LandingPage() {
 
       {/* ─── NAVBAR ─── */}
       <header id="main-header" className={`fixed top-0 left-0 w-full z-40 px-6 sm:px-12 flex justify-between items-center transition-all duration-300 ${scrolled ? "bg-[#08080a]/95 backdrop-blur-lg shadow-lg shadow-black/50 py-2" : "bg-transparent py-4"}`}>
-        <button onClick={() => scrollToSection('#inicio')} className="cursor-hover flex items-center gap-3 bg-transparent border-none">
-          <svg className="w-8 h-8 text-white fill-current header-logo" viewBox="0 0 100 100">
-            <path d="M10 50 Q 30 20, 50 50 T 90 50 Q 70 80, 50 50 T 10 50 Z" />
-          </svg>
-          <div className="font-display font-black tracking-tighter text-lg leading-tight text-left">
-            MAREA<br /><span className="text-[#ffde59] text-xs tracking-widest">MEDIOS</span>
+        <button onClick={() => scrollToSection('#inicio')} className="cursor-hover flex items-center gap-3 group bg-transparent border-none p-0">
+          <img 
+            src="/images/logo-marea-medios_25772d23.png" 
+            alt="Marea Medios" 
+            className="w-8 h-8 object-contain invert transition-transform group-hover:scale-110" 
+          />
+          <div className="flex flex-col leading-none text-left">
+            <span className="text-white text-xl tracking-wider font-black font-sans uppercase">MAREA</span>
+            <span className="text-[#ffde59] text-xs font-bold tracking-[0.25em] uppercase">MEDIOS</span>
           </div>
         </button>
 
@@ -287,7 +290,6 @@ export default function LandingPage() {
               {item}
             </button>
           ))}
-          {/* AQUÍ ESTÁN TUS ENLACES DE BLOG Y LOGIN */}
           <Link href="/blog" className="cursor-hover hover:text-[#ffde59] transition-colors text-white">BLOG</Link>
         </nav>
 
@@ -368,7 +370,7 @@ export default function LandingPage() {
             </div>
 
             <div id="founder-card" className="relative rounded-2xl overflow-hidden border border-[#ffde59]/20 bg-zinc-950 p-2 shadow-[0_0_40px_rgba(250,204,21,0.15)] w-full max-w-md transform-gpu">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80" alt="Director Marea Medios" className="w-full h-[480px] object-cover rounded-xl filter contrast-110" />
+              <img src="/images/fondo-banner.jpg" alt="Director Marea Medios" className="w-full h-[480px] object-cover rounded-xl filter contrast-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
               <div className="absolute bottom-6 left-6 text-xs font-mono text-zinc-400">
                 EQUIPO DIRECTIVO ✦ RODAJES 4K & DRON
@@ -406,10 +408,10 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 reels-grid">
             {[
               // IMPORTANTE: Debes colocar tus videos descargados en la carpeta public/videos/ de tu proyecto
-              { mp4: "/videos/reel1.mp4", url: "https://www.instagram.com/p/DcUQrsAil-J/", offset: false },
-              { mp4: "/videos/reel2.mp4", url: "https://www.instagram.com/p/DfFXO5PlR11/", offset: true },
-              { mp4: "/videos/reel3.mp4", url: "https://www.instagram.com/p/DaS7_gLjODY/", offset: false },
-              { mp4: "/videos/reel4.mp4", url: "https://www.instagram.com/p/DdpR-rfCSq1/", offset: true }
+              { mp4: "/videos/video1.mp4", url: "https://www.instagram.com/p/DdkHkBlOp5a/", offset: false },
+              { mp4: "/videos/video2.mp4", url: "https://www.instagram.com/reels/DZnuy33y-f6/", offset: true },
+              { mp4: "/videos/video3.mp4", url: "https://www.instagram.com/reels/Decwuvhjt6F/", offset: false },
+              { mp4: "/videos/video4.mp4", url: "https://www.instagram.com/reels/DcUQrsAil-J/", offset: true }
             ].map((reel, i) => (
               <a
                 key={i}
@@ -449,19 +451,31 @@ export default function LandingPage() {
         </div>
 
           {/* Apartado Mini del Canal */}
-          <div className="mt-20 flex justify-center">
-            <a href="https://www.instagram.com/mareamedios" target="_blank" rel="noopener noreferrer" className="cursor-hover inline-flex items-center gap-4 px-6 py-3 bg-zinc-900/50 border border-white/10 hover:border-[#ffde59]/50 rounded-full transition-all group backdrop-blur-sm">
-              {/* Icono Instagram Gradiente */}
-              <div className="w-6 h-6 flex items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 shadow-sm">
-                <Instagram className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span className="text-white text-sm font-bold font-sans">Síguenos en Instagram</span>
-              <span className="hidden sm:inline-block text-zinc-500 text-[10px] font-mono uppercase tracking-widest pl-4 border-l border-white/10 group-hover:text-[#ffde59] transition-colors">
-                @mareamedios
-              </span>
-            </a>
-          </div>
+          <div className="mt-20 flex flex-col items-center gap-6">
+            <div className="flex flex-wrap justify-center gap-4">
+              <a href="https://www.instagram.com/mareamedios" target="_blank" rel="noopener noreferrer" className="cursor-hover inline-flex items-center gap-4 px-6 py-3 bg-zinc-900/50 border border-white/10 hover:border-[#ffde59]/50 rounded-full transition-all group backdrop-blur-sm">
+                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-fuchsia-600 shadow-sm">
+                  <Instagram className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="text-white text-sm font-bold font-sans">Síguenos en Instagram</span>
+                <span className="hidden sm:inline-block text-zinc-500 text-[10px] font-mono uppercase tracking-widest pl-4 border-l border-white/10 group-hover:text-[#ffde59] transition-colors">
+                  @mareamedios
+                </span>
+              </a>
 
+              <a href="https://www.tiktok.com/@agc_mareamedios" target="_blank" rel="noopener noreferrer" className="cursor-hover inline-flex items-center gap-4 px-6 py-3 bg-zinc-900/50 border border-white/10 hover:border-[#ffde59]/50 rounded-full transition-all group backdrop-blur-sm">
+                <div className="w-6 h-6 flex items-center justify-center rounded-full bg-black shadow-sm border border-white/20">
+                  <svg className="w-3 h-3 fill-white" viewBox="0 0 448 512">
+                    <path d="M448,209.91a210.06,210.06,0,0,1-122.77-39.25V349.38A162.55,162.55,0,1,1,185,188.31V278.2a74.62,74.62,0,1,0,52.23,71.18V0l88,0a121.18,121.18,0,0,0,1.86,22.17h0A122.18,122.18,0,0,0,381,102.39a121.43,121.43,0,0,0,67,20.14Z"/>
+                  </svg>
+                </div>
+                <span className="text-white text-sm font-bold font-sans">Síguenos en TikTok</span>
+                <span className="hidden sm:inline-block text-zinc-500 text-[10px] font-mono uppercase tracking-widest pl-4 border-l border-white/10 group-hover:text-[#ffde59] transition-colors">
+                  @agc_mareamedios
+                </span>
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -621,8 +635,8 @@ export default function LandingPage() {
       </section>
 
       {/* ─── PLANES ─── */}
-      <section id="planes" className="py-28 px-6 sm:px-12 max-w-[1400px] mx-auto perspective-container border-t border-white/10">
-        <div className="text-center max-w-3xl mx-auto mb-12 planes-header">
+      <section id="planes" className="py-28 px-6 sm:px-12 max-w-6xl mx-auto perspective-container border-t border-white/10">
+        <div className="text-center max-w-3xl mx-auto mb-16 planes-header">
           <div className="flex items-center justify-center gap-3 mb-3">
             <div className="w-8 h-[2px] bg-[#ffde59]" />
             <span className="text-xs font-mono font-bold tracking-widest text-[#ffde59] uppercase">INVERSIÓN EN TU MARCA</span>
@@ -634,119 +648,181 @@ export default function LandingPage() {
           <p className="text-zinc-400 text-sm sm:text-base mt-4 font-light">
             Elige el plan que mejor se adapte a tus objetivos comerciales. Más opciones para crecer juntos.
           </p>
-
-          <div className="inline-flex items-center gap-4 mt-8 p-1.5 bg-zinc-900 border border-zinc-800 rounded-full shadow-lg">
-            <button onClick={() => setIsTrimestral(false)} className={`cursor-hover px-5 py-2 rounded-full text-xs font-bold uppercase transition-all ${!isTrimestral ? "bg-[#ffde59] text-black" : "text-zinc-400 hover:text-white"}`}>
-              Facturación Mensual
-            </button>
-            <button onClick={() => setIsTrimestral(true)} className={`cursor-hover px-5 py-2 rounded-full text-xs font-bold uppercase transition-all flex items-center gap-2 ${isTrimestral ? "bg-[#ffde59] text-black" : "text-zinc-400 hover:text-white"}`}>
-              Trimestral <span className="text-[9px] px-1.5 py-0.5 bg-yellow-400/20 text-[#ffde59] rounded-full">-15% OFF</span>
-            </button>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch pricing-grid">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch pricing-grid">
           {[
-            { name: "BÁSICO", desc: "Para negocios que están comenzando.", priceM: "$650.000", priceT: "$552.500", feats: ["5 contenidos para redes", "3 videos comerciales", "2 carruseles", "Manejo de comunidad"], theme: "dark" },
-            { name: "ESTÁNDAR", desc: "Para marcas que quieren crecer rápido.", priceM: "$1.500.000", priceT: "$1.275.000", feats: ["10 contenidos para redes", "6 videos comerciales", "4 carruseles", "Manejo total", "Community Manager"], theme: "yellow", tag: "★ MÁS POPULAR" },
-            { name: "PREMIUM", desc: "Para posicionamiento total y profesional.", priceM: "$2.700.000", priceT: "$2.295.000", feats: ["15 contenidos al mes", "8 videos profesionales", "4 videos trend", "Página web incluida", "Estrategia Completa"], theme: "dark" },
-            { name: "CORPORATIVO", desc: "Para empresas que dominan su sector.", priceM: "$4.500.000", priceT: "$3.825.000", feats: ["20 contenidos al mes", "10 videos cine (4K/Dron)", "Pauta Avanzada (Ads)", "Tienda E-commerce SaaS", "Director de Cuenta"], theme: "elite" }
+            { 
+              name: "ESTÁNDAR", 
+              desc: "Para marcas que quieren crecer rápido.", 
+              price: "$1.500.000", 
+              feats: ["10 contenidos mensuales para redes", "6 videos comerciales", "4 carruseles o piezas gráficas", "Gestión de redes sociales", "Community Manager", "Planeación estratégica y calendario de contenido", "Copywriting y seguimiento"], 
+              theme: "dark" 
+            },
+            { 
+              name: "PREMIUM", 
+              desc: "Para marcas que buscan posicionamiento y una comunicación profesional.", 
+              price: "$2.500.000", 
+              feats: ["15 contenidos mensuales", "8 videos profesionales", "4 videos de tendencia", "Piezas gráficas y carruseles", "Estrategia de contenido integral", "Gestión y administración de redes", "Dirección creativa", "Landing page incluida"], 
+              theme: "yellow", 
+              tag: "★ MÁS POPULAR" 
+            },
+            { 
+              name: "CORPORATIVO", 
+              desc: "Para empresas que buscan un sistema integral de marketing y crecimiento.", 
+              price: "$3.500.000", 
+              feats: ["Producción de contenido profesional", "Estrategia integral de marketing", "Gestión de redes sociales", "Campañas en Meta Ads", "Campañas en Google Ads", "Campañas en TikTok Ads", "Landing page orientada a conversión", "Creatividades para publicidad", "Análisis y optimización de resultados", "Acompañamiento estratégico comercial"], 
+              info: "La inversión publicitaria de las campañas no está incluida en el valor del servicio.", 
+              theme: "elite" 
+            }
           ].map((plan, i) => (
-            <div key={i} className={`pricing-card p-6 xl:p-8 rounded-2xl flex flex-col justify-between transition-all duration-300 transform-gpu relative ${
-              plan.theme === 'yellow' ? 'bg-[#ffde59] text-black border-2 border-black scale-[1.02] hover:scale-105 shadow-[0_0_50px_rgba(250,204,21,0.25)] z-10' :
+            <div key={i} className={`pricing-card p-5 xl:p-6 rounded-2xl flex flex-col justify-between transition-all duration-300 transform-gpu relative ${
+              plan.theme === 'yellow' ? 'bg-[#ffde59] text-black border-2 border-black scale-[1.03] hover:scale-[1.05] shadow-[0_0_50px_rgba(250,204,21,0.25)] z-10' :
               plan.theme === 'elite' ? 'bg-gradient-to-b from-zinc-900 to-black border border-yellow-400/30 hover:border-yellow-400 hover:-translate-y-2 overflow-hidden' :
               'bg-zinc-950 border border-white/10 hover:border-yellow-400/40 hover:-translate-y-2'
             }`}>
               {plan.theme === 'elite' && <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-500/10 blur-[40px] rounded-full pointer-events-none" />}
               {plan.tag && <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-black text-[#ffde59] font-mono font-bold text-[10px] px-3 py-1 uppercase tracking-widest rounded-full shadow-lg">{plan.tag}</div>}
               
-              <div className="relative z-10">
-                <h3 className={`font-display text-xl xl:text-2xl font-black uppercase ${plan.theme === 'yellow' ? 'text-black' : plan.theme === 'elite' ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200' : 'text-white'}`}>{plan.name}</h3>
-                <p className={`text-[11px] xl:text-xs mt-2 ${plan.theme === 'yellow' ? 'text-black/80' : 'text-zinc-400'}`}>{plan.desc}</p>
-                <div className="my-6">
-                  <span className={`font-display text-3xl xl:text-4xl font-black ${plan.theme === 'yellow' ? 'text-black' : plan.theme === 'elite' ? 'text-white' : 'text-[#ffde59]'}`}>
-                    {isTrimestral ? plan.priceT : plan.priceM}
+              <div className="relative z-10 flex-1">
+                <h3 className={`font-display text-xl font-black uppercase ${plan.theme === 'yellow' ? 'text-black' : plan.theme === 'elite' ? 'text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-200' : 'text-white'}`}>{plan.name}</h3>
+                <p className={`text-[11px] mt-2 ${plan.theme === 'yellow' ? 'text-black/80' : 'text-zinc-400'}`}>{plan.desc}</p>
+                
+                <div className="my-5">
+                  <span className={`font-display text-3xl font-black ${plan.theme === 'yellow' ? 'text-black' : plan.theme === 'elite' ? 'text-white' : 'text-[#ffde59]'}`}>
+                    {plan.price}
                   </span>
                   <span className={`text-xs font-mono block mt-1 ${plan.theme === 'yellow' ? 'text-black/70' : 'text-zinc-500'}`}>COP / mes</span>
                 </div>
-                <ul className={`space-y-3 text-xs ${plan.theme === 'yellow' ? 'font-semibold text-black' : 'text-zinc-300'}`}>
+
+                <ul className={`space-y-2.5 text-[11px] mb-6 ${plan.theme === 'yellow' ? 'font-semibold text-black' : 'text-zinc-300'}`}>
                   {plan.feats.map((feat, fIdx) => (
-                    <li key={fIdx} className="flex items-center gap-2">✓ {feat}</li>
+                    <li key={fIdx} className="flex items-start gap-2">
+                      <span className="shrink-0 mt-0.5">✓</span>
+                      <span>{feat}</span>
+                    </li>
                   ))}
                 </ul>
               </div>
-              <a href={`https://wa.me/?text=Hola%2C%20quiero%20el%20Plan%20${plan.name}`} target="_blank" rel="noreferrer" className={`cursor-hover relative z-10 mt-8 block text-center py-3.5 font-extrabold text-xs uppercase tracking-wider transition-colors rounded-lg ${
-                plan.theme === 'yellow' ? 'bg-black hover:bg-zinc-900 text-[#ffde59] shadow-xl shadow-black/20' :
-                plan.theme === 'elite' ? 'bg-white hover:bg-zinc-200 text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]' :
-                'bg-yellow-400/10 border border-yellow-400/20 hover:bg-yellow-400 hover:text-black text-yellow-400'
-              }`}>
-                {plan.theme === 'yellow' ? 'El Más Popular' : plan.theme === 'elite' ? 'Contactar Ventas' : 'Empezar Ahora'}
-              </a>
+              
+              <div className="relative z-10 mt-auto">
+                {/* Nota Informativa para el Plan Corporativo */}
+                {plan.info && (
+                  <div className="mb-4 pt-3 border-t border-white/10">
+                    <p className="text-[10px] leading-relaxed text-zinc-400 italic">
+                      * {plan.info}
+                    </p>
+                  </div>
+                )}
+
+                <button 
+                  type="button"
+                  data-plan={plan.name}
+                  className={`cursor-hover w-full block text-center py-3 font-extrabold text-[11px] uppercase tracking-wider transition-colors rounded-lg ${
+                    plan.theme === 'yellow' ? 'bg-black hover:bg-zinc-900 text-[#ffde59] shadow-xl shadow-black/20' :
+                    plan.theme === 'elite' ? 'bg-white hover:bg-zinc-200 text-black shadow-[0_0_15px_rgba(255,255,255,0.2)]' :
+                    'bg-yellow-400/10 border border-yellow-400/20 hover:bg-yellow-400 hover:text-black text-yellow-400'
+                  }`}
+                >
+                  {plan.theme === 'yellow' ? 'El Más Popular' : plan.theme === 'elite' ? 'Contactar Ventas' : 'Empezar Ahora'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ─── SAAS INTERACTIVO ─── */}
-      <section id="sistemas" className="py-28 px-6 sm:px-12 bg-black border-y border-white/10 overflow-hidden">
-        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-center">
+      {/* ─── PÁGINAS WEB Y DEMOS ─── */}
+      <section id="paginas" className="py-28 px-6 sm:px-12 bg-black border-y border-white/10 overflow-hidden relative">
+        {/* Fondo sutil con puntos para el área de demos (Estilo Reference) */}
+        <div className="absolute inset-0 bg-[radial-gradient(#ffffff22_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto grid lg:grid-cols-12 gap-12 items-start relative z-10">
           
-          <div className="lg:col-span-6 saas-text-content">
-            <span className="text-xs font-mono font-bold tracking-widest text-[#ffde59] uppercase">INFRAESTRUCTURA SAAS PREMIUM</span>
-            <h2 className="font-display text-4xl sm:text-6xl font-black uppercase tracking-tight mt-3 mb-6">
-              TU PROPIA TIENDA ONLINE BAJO MODELO DE <span className="text-[#ffde59]">SUSCRIPCIÓN</span>
+          {/* Columna Izquierda: Información de Página Express */}
+          <div className="lg:col-span-5 saas-text-content">
+            <span className="text-xs font-mono font-bold tracking-widest text-[#ffde59] uppercase">DESARROLLO WEB</span>
+            <h2 className="font-display text-4xl sm:text-5xl font-black uppercase tracking-tight mt-3 mb-6 leading-[0.9]">
+              PÁGINA <span className="text-[#ffde59]">EXPRESS</span> 🚀
             </h2>
-            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed mb-8 font-light">
-              Le damos superpoderes digitales a tu marca. Accede a una plataforma robusta, ultra rápida y autoadministrable diseñada para multiplicar tus ventas sin costos ocultos de desarrollo.
+            <p className="text-zinc-300 text-sm leading-relaxed mb-8 font-medium">
+              Una página hecha para tu negocio, no una plantilla, para que tus clientes te encuentren y te escriban con un clic.
             </p>
 
-            <div className="flex flex-wrap gap-2 mb-8">
-              {[
-                { id: 'dashboard', label: '01. Dashboard' },
-                { id: 'tienda', label: '02. Tienda Móvil' },
-                { id: 'pedidos', label: '03. Checkout' }
-              ].map(tab => (
-                <button key={tab.id} onClick={() => handleSaasTab(tab.id)} className={`cursor-hover px-4 py-2 text-xs font-mono uppercase font-bold rounded transition-colors ${saasTab === tab.id ? 'bg-[#ffde59] text-black shadow-lg shadow-yellow-400/20' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-                  {tab.label}
-                </button>
-              ))}
+            <div className="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 mb-8 shadow-2xl backdrop-blur-sm">
+              <span className="font-display text-sm font-bold text-white mb-4 block uppercase tracking-wider">Incluye:</span>
+              <ul className="space-y-3.5 text-xs text-zinc-300">
+                {[
+                  "Inicio con lo que ofreces y por qué elegirte",
+                  "Tus servicios o productos, con fotos",
+                  "Galería y opiniones de tus clientes",
+                  "Ubicación, horario y contacto",
+                  "Botón de WhatsApp en toda la página, con el mensaje ya escrito",
+                  "Se ve muy bien en el celular",
+                  "Lista para que Google la encuentre",
+                  "Tu perfil de negocio en Google Maps, si aún no lo tienes",
+                  "Sabrás cuántas personas te visitan y de dónde llegan",
+                  "3 meses de soporte gratis",
+                  "Todo queda a tu nombre"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                      <Check className="w-2.5 h-2.5 text-emerald-400" />
+                    </span>
+                    <span className="leading-snug">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <p className="text-xs text-zinc-400 italic mb-4">Tú nos mandas tus fotos y textos, y del resto nos encargamos nosotros.</p>
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">💰</span>
+                  <p className="text-sm font-bold text-white leading-tight">
+                    <span className="text-[#ffde59]">$400.000, pago único.</span><br/>
+                    <span className="text-xs font-normal text-zinc-400 mt-1 block">Lo único que se renueva cada año es tu dirección web (.com), unos $70.000.</span>
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-4 mb-8">
-              <div className="flex items-start gap-3 saas-feature">
-                <span className="text-xl">🛍️</span>
-                <div>
-                  <strong className="font-bold text-white block text-sm">Plataforma Todo en Uno</strong>
-                  <p className="text-zinc-400 text-xs">Control de stock, variantes de producto y pedidos centralizados en tiempo real.</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 saas-feature">
-                <span className="text-xl">💳</span>
-                <div>
-                  <strong className="font-bold text-white block text-sm">Pasarela de Pagos & Checkout Eficiente</strong>
-                  <p className="text-zinc-400 text-xs">Integrado con Wompi, ePayco o MercadoPago para que cobres sin fricción.</p>
-                </div>
-              </div>
-            </div>
+            <a href="https://wa.me/573000000000?text=Hola%2C%20quiero%20una%20P%C3%A1gina%20Express" target="_blank" rel="noreferrer" className="cursor-hover inline-block px-8 py-4 bg-[#ffde59] text-black font-extrabold text-xs uppercase tracking-widest transition-all rounded-lg shadow-lg hover:scale-105">
+              ¿Quieres la tuya? Escríbenos →
+            </a>
           </div>
 
-          <div className="lg:col-span-6 relative saas-image-content">
-            <div className="p-3 bg-zinc-900 rounded-2xl border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.9)] transform-gpu hover:rotate-1 transition-transform duration-700">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 text-xs font-mono text-zinc-400">
-                <span>{saasTab === 'dashboard' ? 'Tienda Marea — Panel de Control General' : saasTab === 'tienda' ? 'Tienda Marea — Catálogo Móvil Optimizado' : 'Tienda Marea — Módulo de Pedidos y Pasarela'}</span>
-                <div className="flex gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-red-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]" />
-                  <span className="w-3 h-3 rounded-full bg-yellow-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]" />
-                  <span className="w-3 h-3 rounded-full bg-green-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]" />
+          {/* Columna Derecha: Galería de Demos */}
+          <div className="lg:col-span-7 saas-image-content">
+            <div className="mb-8">
+              <h3 className="font-display text-3xl font-black text-white mb-2">Demos</h3>
+              <p className="text-zinc-400 text-sm font-light">Negocios inventados para que veas cómo se vería la página o la plataforma de tu negocio.</p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {[
+                { tag: "CAFETERÍA", title: "Lumbre", desc: "Menú con precios, horario, galería y pedidos por WhatsApp.", link: "#demo-lumbre" },
+                { tag: "TIENDA DE ROPA", title: "Ocre Studio", desc: "Catálogo por categorías, tallas y compra por WhatsApp.", link: "#demo-ocre" },
+                { tag: "SERVICIOS DE ASEO", title: "Nítido", desc: "Servicios con precios, cómo funciona, cobertura y cotización.", link: "#demo-nitido" },
+                { tag: "EVENTO", title: "Festival Fogón", desc: "Fecha con cuenta regresiva, agenda, boletas y ubicación.", link: "#demo-fogon" },
+                { tag: "PLATAFORMA WEB", title: "Panel de Nítido", desc: "Pedidos, clientes, servicios, precios y personal en un panel.", link: "#demo-panel" }
+              ].map((demo, i) => (
+                <div key={i} className="p-6 bg-[#111] border border-white/10 rounded-xl hover:border-[#ffde59]/40 transition-colors group flex flex-col justify-between">
+                  <div>
+                    <span className="text-[9px] font-mono font-bold tracking-widest text-[#ffde59] uppercase block mb-3">{demo.tag}</span>
+                    <h4 className="font-display text-xl font-bold text-white mb-2">{demo.title}</h4>
+                    <p className="text-xs text-zinc-400 leading-relaxed mb-6">{demo.desc}</p>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <a href={demo.link} className="cursor-hover px-4 py-2 bg-[#ffde59] text-black font-bold text-[10px] uppercase tracking-wider rounded-md hover:bg-yellow-300 transition-colors">
+                      Ver Demo
+                    </a>
+                    <button onClick={() => {navigator.clipboard.writeText(`https://mareamedios.com${demo.link}`); alert("Enlace copiado");}} className="cursor-hover px-4 py-2 bg-transparent border border-white/20 text-white hover:border-white/50 font-bold text-[10px] uppercase tracking-wider rounded-md transition-colors">
+                      Copiar Enlace
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="relative h-80 overflow-hidden rounded-xl mt-2 bg-zinc-950 flex items-center justify-center">
-                <img 
-                  src={saasTab === 'dashboard' ? '/images/dashboard.png' : saasTab === 'tienda' ? '/images/tienda.png' : '/images/orders.png'} 
-                  alt="SaaS Preview" 
-                  className={`w-full h-full object-cover transition-all duration-400 ${isSaasChanging ? 'opacity-0 blur-md scale-95' : 'opacity-100 blur-0 scale-100'}`} 
-                />
-              </div>
+              ))}
             </div>
           </div>
 
@@ -793,9 +869,9 @@ export default function LandingPage() {
       <footer className="pt-16 pb-12 bg-black border-t border-white/10 overflow-hidden relative">
         <div className="py-4 overflow-hidden mb-12 select-none border-b border-white/5">
           <div className="marquee-track font-display text-6xl sm:text-8xl font-black uppercase tracking-tighter text-zinc-800 gap-8">
-            <span className="hover:text-[#ffde59] transition-colors">SOMOS LA MAREA QUE MUEVE MARCAS ✦</span>
+            <span className="text-[#ffde59]">SOMOS LA MAREA QUE MUEVE MARCAS ✦</span>
             <span className="text-white">MAREA MEDIOS ✦</span>
-            <span className="hover:text-[#ffde59] transition-colors">ESTRATEGIA ✦ PRODUCCIÓN ✦ SOFTWARE ✦</span>
+            <span className="text-[#ffde59]">ESTRATEGIA ✦ PRODUCCIÓN ✦ SOFTWARE ✦</span>
             <span className="text-white">MAREA MEDIOS ✦</span>
           </div>
         </div>
