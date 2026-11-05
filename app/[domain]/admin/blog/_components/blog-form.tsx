@@ -1,13 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBlogPost, updateBlogPost, getBlogCategories } from '../../actions/blog-actions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ImagePlus, Loader2, Save, XCircle, CheckCircle2, Clock, Tags, FolderTree } from 'lucide-react'
+import { ImagePlus, Loader2, Save, XCircle, Tags, FolderTree } from 'lucide-react'
 import dynamic from 'next/dynamic'
-import Script from 'next/script'
 
 // 🚀 IMPORTACIÓN AVANZADA: Cargamos el editor y el formateador moderno
 // @ts-ignore
@@ -54,48 +53,6 @@ const ReactQuill = dynamic(async () => {
 // @ts-ignore
 import 'react-quill/dist/quill.snow.css'
 
-// =========================================================================
-// ⚡ CONFIGURACIÓN DE TU GALERÍA DE CLOUDINARY
-// =========================================================================
-const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-
-const openCloudinaryGallery = (callback: (url: string) => void) => {
-  // Verificamos que las variables existan para evitar errores
-  if (!cloudName || !apiKey) {
-    alert("Error: Faltan las credenciales de Cloudinary en el archivo .env");
-    return;
-  }
-
-  // @ts-ignore
-  if (typeof window === 'undefined' || !window.cloudinary) {
-    alert("Conectando con la galería... Espera un momento.")
-    return
-  }
-  
-  // @ts-ignore
-  window.cloudinary.openMediaLibrary(
-    { cloud_name: cloudName, api_key: apiKey, multiple: false },
-    {
-      insertHandler: function (data: any) {
-        if (data && data.assets && data.assets.length > 0) {
-          callback(data.assets[0].secure_url)
-        }
-      }
-    }
-  )
-}
-
-function imageHandler(this: any) {
-  const quill = this.quill;
-  openCloudinaryGallery((url) => {
-    quill.focus();
-    const range = quill.getSelection();
-    const position = range ? range.index : quill.getLength();
-    quill.insertEmbed(position, 'image', url);
-    quill.setSelection(position + 1);
-  });
-}
 
 // =========================================================================
 // 🚀 INICIO DEL COMPONENTE
@@ -111,21 +68,20 @@ export function BlogForm({ initialData }: { initialData?: any }) {
   const [coverImage, setCoverImage] = useState(initialData?.coverImage || '')
   const [status, setStatus] = useState(initialData?.status || 'DRAFT')
 
-  // 👇 NUEVOS ESTADOS PARA TAXONOMÍA
+  // Taxonomía
   const [categoryId, setCategoryId] = useState(initialData?.categoryId || '')
   const [categories, setCategories] = useState<any[]>([])
-  
-  // Extraemos los nombres de las etiquetas si estamos editando
   const [tags, setTags] = useState<string[]>(
     initialData?.tags ? initialData.tags.map((t: any) => t.name) : []
   )
   const [tagInput, setTagInput] = useState('')
 
-  // Cargar categorías disponibles al montar el componente
+  // Referencias y estados para carga local de imágenes
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
   useEffect(() => {
     const loadCategories = async () => {
-      // NOTA: Si en tu sistema tienes el tenantId a la mano, pásalo aquí. 
-      // Si usas un solo Tenant global por ahora, puedes enviar un string vacío y ajustarlo en el backend.
       const res = await getBlogCategories();
       if (res.success && res.data) {
         setCategories(res.data)
@@ -134,14 +90,12 @@ export function BlogForm({ initialData }: { initialData?: any }) {
     loadCategories()
   }, [])
 
-  // Auto-generar Slug
   useEffect(() => {
     if (!initialData && title) {
       setSlug(title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''))
     }
   }, [title, initialData])
 
-  // Lógica para agregar etiquetas con Enter o Coma
   const handleAddTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault()
@@ -157,26 +111,92 @@ export function BlogForm({ initialData }: { initialData?: any }) {
     setTags(tags.filter(tag => tag !== tagToRemove))
   }
 
-  const modules = typeof window !== 'undefined' ? {
-    toolbar: {
-      container: [
-        [{ 'header': [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-        [{ 'align': [] }], 
-        ['link', 'image'],
-        ['clean']
-      ],
-      handlers: { image: imageHandler }
-    },
-    blotFormatter: {}
-  } : {};
+  // ⚡ LÓGICA DE SUBIDA LOCAL (PARA PORTADA)
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setCoverImage(data.url);
+      } else {
+        alert("Error: " + data.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Hubo un error subiendo la imagen de portada");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // ⚡ CONFIGURACIÓN DE QUILL CON SUBIDA LOCAL
+  const modules = useMemo(() => {
+    if (typeof window === 'undefined') return {};
+    return {
+      toolbar: {
+        container: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'align': [] }], 
+          ['link', 'image'],
+          ['clean']
+        ],
+        handlers: {
+          image: function(this: any) {
+            const quill = this.quill;
+            const input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.click();
+
+            input.onchange = async () => {
+              const file = input.files ? input.files[0] : null;
+              if (file) {
+                try {
+                  const formData = new FormData();
+                  formData.append('file', file);
+                  
+                  const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  const data = await res.json();
+                  
+                  if (data.success) {
+                    const range = quill.getSelection(true);
+                    quill.insertEmbed(range.index, 'image', data.url);
+                    quill.setSelection(range.index + 1);
+                  } else {
+                    alert("Error subiendo la imagen al editor");
+                  }
+                } catch (error) {
+                  alert("Hubo un error de conexión al subir la imagen");
+                }
+              }
+            };
+          }
+        }
+      },
+      blotFormatter: {}
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     
-    // Inyectamos las nuevas variables en el payload
     const payload = { title, slug, excerpt, content, coverImage, status, categoryId, tags }
     
     const res = initialData ? await updateBlogPost(initialData.id, payload) : await createBlogPost(payload)
@@ -186,7 +206,6 @@ export function BlogForm({ initialData }: { initialData?: any }) {
 
   return (
     <div className="w-full animate-in fade-in duration-500 pb-12">
-      <Script src="https://media-library.cloudinary.com/global/all.js" strategy="afterInteractive" />
 
       <div className="mb-6">
         <h1 className="text-[22px] font-bold text-gray-900 font-sans">
@@ -221,18 +240,33 @@ export function BlogForm({ initialData }: { initialData?: any }) {
 
             <div className="space-y-3">
               <label className="text-xs font-bold text-gray-700">Imagen de Portada</label>
+              
+              {/* Input oculto para cargar archivos */}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleCoverUpload} 
+                accept="image/*" 
+                className="hidden" 
+              />
+              
               <div 
-                onClick={() => openCloudinaryGallery(setCoverImage)}
-                className="w-full h-40 border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-50 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group overflow-hidden relative"
+                onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                className={`w-full h-40 border-2 border-dashed border-gray-200 bg-gray-50/50 hover:bg-gray-50 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all group overflow-hidden relative ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}
               >
-                {coverImage ? (
+                {uploadingImage ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="animate-spin text-blue-500 mb-2" size={24} />
+                    <span className="text-sm font-medium text-gray-600">Subiendo imagen...</span>
+                  </div>
+                ) : coverImage ? (
                   <img src={coverImage} className="w-full h-full object-cover" alt="Preview" />
                 ) : (
                   <>
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
                       <ImagePlus className="text-blue-500" size={20} />
                     </div>
-                    <span className="text-sm font-medium text-gray-600">Haz clic para abrir tu Galería</span>
+                    <span className="text-sm font-medium text-gray-600">Haz clic para subir desde tu PC</span>
                     <span className="text-xs text-gray-400 mt-1">Recomendado: 1200x630px</span>
                   </>
                 )}
@@ -269,13 +303,11 @@ export function BlogForm({ initialData }: { initialData?: any }) {
         {/* COLUMNA DERECHA: PANELES LATERALES */}
         <div className="lg:col-span-4 space-y-6">
           
-          {/* NUEVO PANEL: CLASIFICACIÓN (Categorías y Etiquetas) */}
           <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-5 text-sm flex items-center gap-2">
               <FolderTree size={18} className="text-blue-500"/> Clasificación
             </h3>
             
-            {/* Selector de Categoría */}
             <div className="space-y-2 mb-6">
               <label className="text-xs font-bold text-gray-500">Categoría Principal</label>
               <select 
@@ -290,7 +322,6 @@ export function BlogForm({ initialData }: { initialData?: any }) {
               </select>
             </div>
 
-            {/* Input de Etiquetas (Tags) */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-500 flex items-center gap-1">
                 Etiquetas (Tags)
@@ -306,7 +337,6 @@ export function BlogForm({ initialData }: { initialData?: any }) {
                 />
               </div>
               
-              {/* Contenedor de Pastillas Visuales (Badges) */}
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
                   {tags.map((tag, index) => (
@@ -322,7 +352,6 @@ export function BlogForm({ initialData }: { initialData?: any }) {
             </div>
           </div>
 
-          {/* Tarjeta de Configuración de Publicación */}
           <div className="bg-white rounded-xl shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] border border-gray-100 p-6">
             <h3 className="font-bold text-gray-900 mb-4 text-sm">Estado de Publicación</h3>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
